@@ -14,7 +14,6 @@ namespace DWScripter
 
     class Program
     {
-
         static void Main(string[] args)
         {
             string server = "";
@@ -27,15 +26,16 @@ namespace DWScripter
             string system = "PDW";
             string authentication = "SQL";
             string mode = "";
-            string ExcludeObjectSuffixList = " "; //"_old|_new|_test|_dba";  // used to exclude test or non-user objects;
+            string ExcludeObjectSuffixList = " "; //ex: "_old|_new|_test|_dba"; " " matches nothing by default
+            string SchemaFilter = " "; // single schema filter
             string serverTarget = "";
-            string strportTarget = "";
+            //string strportTarget = "";
             string TargetDb = "";
             string userNameTarget = "";
             string pwdTarget = "";
             string featureToScript = "";
-            string FiltersFilePath ="" ;
-            string CommandTimeout ="";
+            string FiltersFilePath = "" ;
+            string CommandTimeout = "";
 
             Dictionary<String, String> parameters = new Dictionary<string, string>();
             parameters = GetParametersFromArguments(args);
@@ -89,6 +89,9 @@ namespace DWScripter
                     case "-X":
                         ExcludeObjectSuffixList = parameters[pKey];
                         break;
+                    case "-C":
+                        SchemaFilter = "^" + parameters[pKey] + "\\.";
+                        break;
                     case "-t":
                         CommandTimeout = parameters[pKey];
                         break;
@@ -116,7 +119,7 @@ namespace DWScripter
             {
                 if (mode == "Full" || mode == "Delta" || mode == "Compare" || mode == "PersistStructure")
                 {
-                    c = new PDWscripter(system, server, sourceDb, authentication, userName, pwd, wrkMode, ExcludeObjectSuffixList, filterSpec, mode, CommandTimeout);
+                    c = new PDWscripter(system, server, sourceDb, authentication, userName, pwd, wrkMode, ExcludeObjectSuffixList, SchemaFilter, filterSpec, mode, CommandTimeout);
                     if (mode == "PersistStructure")
                         // populate dbstruct class
                         c.getDbstructure(outFile, wrkMode, true);
@@ -181,7 +184,7 @@ namespace DWScripter
                         Console.WriteLine("Filter settings OK");
                     }
 
-                        cTarget = new PDWscripter(system, serverTarget, TargetDb, authentication, userNameTarget, pwdTarget, wrkMode, "%", filterSpec, mode,CommandTimeout);
+                        cTarget = new PDWscripter(system, serverTarget, TargetDb, authentication, userNameTarget, pwdTarget, wrkMode, "%", "%", filterSpec, mode, CommandTimeout);
                         Console.WriteLine("Target Connection Opened");
                         cTarget.getDbstructure(outFile, wrkMode, false);
                         if (mode != "CompareFromFile")
@@ -228,18 +231,19 @@ namespace DWScripter
             Console.WriteLine("     [-Pt: password target]");
             Console.WriteLine("     [-F: filter on feature for scripting]");
             Console.WriteLine("     [-Fp: filters file path] no space allowed");
+            Console.WriteLine("     [-C: Schema Filter");
             Console.WriteLine("     [-X: Exclusion Filter");
             Console.WriteLine("     [-t: Command Timeout]");
             Console.WriteLine();
-            Console.WriteLine(@"Sample : DWScripter -S:192.168.1.1,17001 -D:Fabrikam_Dev -E -O:C:\DW_SRC\FabrikamDW_STG -M:PersistStructure");
-            Console.WriteLine(@"Sample : DWScripter -St:192.168.1.1,17001 -Dt:Fabrikam_INT -E -O:C:\DW_SRC\FabrikamDW_STG -M:CompareFromFile -F:ALL");
-            Console.WriteLine(@"Sample : DWScripter -St:192.168.1.1,17001 -Dt:Fabrikam_INT -E -O:C:\DW_SRC\FabrikamDW_STG -M:CompareFromFile -F:DSN_SPRINT2 -Fp:C:\Data\DW_Databases\GlobalDWFilterSettings.json -d:Fabrikam_STG");
+            Console.WriteLine(@"Sample : DWScripter -S:workspace.sql.azuresynapse.net,17001 -D:dbname -E -O:DB_Name -M:PersistStructure");
+            Console.WriteLine(@"Sample : DWScripter -St:workspace.sql.azuresynapse.net -Dt:targetdb -E -O:DEV -M:CompareFromFile -F:ALL");
+            Console.WriteLine(@"Sample : DWScripter -St:workspace.sql.azuresynapse.net -Dt:targetdb -E -O:DEV -M:CompareFromFile -F:SPRINT2 -Fp:GlobalDWFilterSettings.json -d:stagedb");
             return;
         }
         static Dictionary<string,string>  GetParametersFromArguments (string[] args)
         {
             Dictionary<string, string> parameters = new Dictionary<string, string>();
-            string ParametersList = "-S|-D|-E|-M|-O|-St|-Dt|-U|-P|-Ut|-Pt|-W|-F|-Fp|-X|-t";
+            string ParametersList = "-S|-D|-E|-M|-O|-St|-Dt|-U|-P|-Ut|-Pt|-W|-F|-Fp|-X|-C|-t";
             List<string> ParametersHelp = new List<string> { "-help", "-?", "/?" };
             List<string> ModeList = new List<string> { "FULL", "COMPARE", "COMPAREFROMFILE", "PERSISTSTRUCTURE" };
             Regex Plist = new Regex(ParametersList);
@@ -266,9 +270,16 @@ namespace DWScripter
                     DisplayHelp();
                     Environment.Exit(0);
                 }
-                
+
                 if (Plist.IsMatch(ParameterSwitch))
+                {
                     parameters.Add(ParameterSwitch, value);
+                }
+                else
+                {
+                    Console.WriteLine(String.Format("Invalid switch: {0}", ParameterSwitch));
+                    Environment.Exit(1);
+                }
             }
 
             if (parameters.ContainsKey("-M"))
