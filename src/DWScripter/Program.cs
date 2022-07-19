@@ -8,10 +8,8 @@ using System.IO;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
-
 namespace DWScripter
 {
-
     class Program
     {
         static void Main(string[] args)
@@ -34,7 +32,7 @@ namespace DWScripter
             string userNameTarget = "";
             string pwdTarget = "";
             string featureToScript = "";
-            string FiltersFilePath = "" ;
+            string FiltersFilePath = "";
             string CommandTimeout = "";
 
             Dictionary<String, String> parameters = new Dictionary<string, string>();
@@ -106,7 +104,10 @@ namespace DWScripter
                 return;
             }
 
-            if (mode == "Compare" & (String.IsNullOrEmpty(serverTarget) || String.IsNullOrEmpty(TargetDb)))
+            if (
+                mode == "Compare"
+                & (String.IsNullOrEmpty(serverTarget) || String.IsNullOrEmpty(TargetDb))
+            )
             {
                 Console.WriteLine("Target Database elements must be completed ...");
                 return;
@@ -117,9 +118,27 @@ namespace DWScripter
             Boolean SourceFromFile = false;
             try
             {
-                if (mode == "Full" || mode == "Delta" || mode == "Compare" || mode == "PersistStructure")
+                if (
+                    mode == "Full"
+                    || mode == "Delta"
+                    || mode == "Compare"
+                    || mode == "PersistStructure"
+                )
                 {
-                    c = new PDWscripter(system, server, sourceDb, authentication, userName, pwd, wrkMode, ExcludeObjectSuffixList, SchemaFilter, filterSpec, mode, CommandTimeout);
+                    c = new PDWscripter(
+                        system,
+                        server,
+                        sourceDb,
+                        authentication,
+                        userName,
+                        pwd,
+                        wrkMode,
+                        ExcludeObjectSuffixList,
+                        SchemaFilter,
+                        filterSpec,
+                        mode,
+                        CommandTimeout
+                    );
                     if (mode == "PersistStructure")
                         // populate dbstruct class
                         c.getDbstructure(outFile, wrkMode, true);
@@ -164,34 +183,68 @@ namespace DWScripter
                             outFile = outFile.Replace(TargetDb, sourceDb);
                             string outDBJsonStructureFile = outFile + "_STRUCT_DML.json";
                             c.GetDMLstructureFromJSONfile(outDBJsonStructureFile);
-                         }
+                        }
                     }
 
-                   
                     FilterSettings Filters = new FilterSettings();
                     if (featureToScript != "ALL")
                     {
                         // retrieve filter settings from file
-                        Console.WriteLine("Retrieving filter settings file : " + FiltersFilePath + "- Feature : " + featureToScript + " - Database : ...");
+                        Console.WriteLine(
+                            "Retrieving filter settings file : "
+                                + FiltersFilePath
+                                + "- Feature : "
+                                + featureToScript
+                                + " - Database : ..."
+                        );
                         GlobalFilterSettings gFilter = new GlobalFilterSettings();
-                        Filters = gFilter.GetObjectsFromFile(FiltersFilePath, featureToScript, sourceDb);
+                        Filters = gFilter.GetObjectsFromFile(
+                            FiltersFilePath,
+                            featureToScript,
+                            sourceDb
+                        );
 
                         if (Filters == null)
                         {
-                            throw new System.ArgumentException("Filter settings parameter can not be null - initialization from file : " + FiltersFilePath + "- Feature : " + featureToScript + " - Database : ...");
+                            throw new System.ArgumentException(
+                                "Filter settings parameter can not be null - initialization from file : "
+                                    + FiltersFilePath
+                                    + "- Feature : "
+                                    + featureToScript
+                                    + " - Database : ..."
+                            );
                         }
 
                         Console.WriteLine("Filter settings OK");
                     }
 
-                        cTarget = new PDWscripter(system, serverTarget, TargetDb, authentication, userNameTarget, pwdTarget, wrkMode, "%", "%", filterSpec, mode, CommandTimeout);
-                        Console.WriteLine("Target Connection Opened");
-                        cTarget.getDbstructure(outFile, wrkMode, false);
-                        if (mode != "CompareFromFile")
-                            cTarget.getDbTables(false);
+                    cTarget = new PDWscripter(
+                        system,
+                        serverTarget,
+                        TargetDb,
+                        authentication,
+                        userNameTarget,
+                        pwdTarget,
+                        wrkMode,
+                        "%",
+                        "%",
+                        filterSpec,
+                        mode,
+                        CommandTimeout
+                    );
+                    Console.WriteLine("Target Connection Opened");
+                    cTarget.getDbstructure(outFile, wrkMode, false);
+                    if (mode != "CompareFromFile")
+                        cTarget.getDbTables(false);
 
-                        cTarget.CompIterateScriptAllTables(c, cTarget, outFile, SourceFromFile, Filters);
-                    } 
+                    cTarget.CompIterateScriptAllTables(
+                        c,
+                        cTarget,
+                        outFile,
+                        SourceFromFile,
+                        Filters
+                    );
+                }
             }
             catch (Exception ex)
             {
@@ -213,7 +266,7 @@ namespace DWScripter
             Environment.Exit(0);
         }
 
-       public static void DisplayHelp()
+        public static void DisplayHelp()
         {
             Console.WriteLine("DWScripter Command Line Tool");
             Console.WriteLine("Usage DWScripter ");
@@ -235,20 +288,33 @@ namespace DWScripter
             Console.WriteLine("     [-X: Exclusion Filter");
             Console.WriteLine("     [-t: Command Timeout]");
             Console.WriteLine();
-            Console.WriteLine(@"Sample : DWScripter -S:workspace.sql.azuresynapse.net,17001 -D:dbname -E -O:DB_Name -M:PersistStructure");
-            Console.WriteLine(@"Sample : DWScripter -St:workspace.sql.azuresynapse.net -Dt:targetdb -E -O:DEV -M:CompareFromFile -F:ALL");
-            Console.WriteLine(@"Sample : DWScripter -St:workspace.sql.azuresynapse.net -Dt:targetdb -E -O:DEV -M:CompareFromFile -F:SPRINT2 -Fp:GlobalDWFilterSettings.json -d:stagedb");
+            Console.WriteLine(
+                @"Sample : DWScripter -S:workspace.sql.azuresynapse.net,17001 -D:dbname -E -O:DB_Name -M:PersistStructure"
+            );
+            Console.WriteLine(
+                @"Sample : DWScripter -St:workspace.sql.azuresynapse.net -Dt:targetdb -E -O:DEV -M:CompareFromFile -F:ALL"
+            );
+            Console.WriteLine(
+                @"Sample : DWScripter -St:workspace.sql.azuresynapse.net -Dt:targetdb -E -O:DEV -M:CompareFromFile -F:SPRINT2 -Fp:GlobalDWFilterSettings.json -d:stagedb"
+            );
             return;
         }
-        static Dictionary<string,string>  GetParametersFromArguments (string[] args)
+
+        static Dictionary<string, string> GetParametersFromArguments(string[] args)
         {
             Dictionary<string, string> parameters = new Dictionary<string, string>();
             string ParametersList = "-S|-D|-E|-M|-O|-St|-Dt|-U|-P|-Ut|-Pt|-W|-F|-Fp|-X|-C|-t";
             List<string> ParametersHelp = new List<string> { "-help", "-?", "/?" };
-            List<string> ModeList = new List<string> { "FULL", "COMPARE", "COMPAREFROMFILE", "PERSISTSTRUCTURE" };
+            List<string> ModeList = new List<string>
+            {
+                "FULL",
+                "COMPARE",
+                "COMPAREFROMFILE",
+                "PERSISTSTRUCTURE"
+            };
             Regex Plist = new Regex(ParametersList);
-            string ParameterSwitch="";
-            string value="";
+            string ParameterSwitch = "";
+            string value = "";
             int SeparatorPosition;
 
             for (var x = 0; x < args.Count(); x++)
@@ -257,7 +323,10 @@ namespace DWScripter
                 if (SeparatorPosition != -1)
                 {
                     ParameterSwitch = args[x].Substring(0, SeparatorPosition);
-                    value = args[x].Substring(SeparatorPosition + 1, args[x].Length - SeparatorPosition - 1);
+                    value = args[x].Substring(
+                        SeparatorPosition + 1,
+                        args[x].Length - SeparatorPosition - 1
+                    );
                 }
                 else
                 {
@@ -286,7 +355,11 @@ namespace DWScripter
             {
                 if (!ModeList.Contains(parameters["-M"].ToUpper()))
                 {
-                    Console.WriteLine("Value " + parameters["-M"] + "is not allowed. Only values FULL, COMPARE, COMPAREFROMFILE, PERSISTSTRUCTURE for parameter -M");
+                    Console.WriteLine(
+                        "Value "
+                            + parameters["-M"]
+                            + "is not allowed. Only values FULL, COMPARE, COMPAREFROMFILE, PERSISTSTRUCTURE for parameter -M"
+                    );
                     Environment.Exit(1);
                 }
             }
@@ -297,7 +370,10 @@ namespace DWScripter
             }
 
             // check feature switch existence when work mode different from PERSISTSTRUCTURE or FULL mode
-            if (parameters["-M"].ToUpper() != "PERSISTSTRUCTURE" && parameters["-M"].ToUpper() != "FULL")
+            if (
+                parameters["-M"].ToUpper() != "PERSISTSTRUCTURE"
+                && parameters["-M"].ToUpper() != "FULL"
+            )
             {
                 if (!parameters.ContainsKey("-F"))
                 {
@@ -308,20 +384,22 @@ namespace DWScripter
                 {
                     if (!parameters.ContainsKey("-D") && parameters["-F"].ToUpper() != "ALL")
                     {
-                        Console.WriteLine("Argument -D is missing [Database Name], fill it to continue");
+                        Console.WriteLine(
+                            "Argument -D is missing [Database Name], fill it to continue"
+                        );
                         Environment.Exit(1);
                     }
 
                     if (!parameters.ContainsKey("-Fp") && parameters["-F"].ToUpper() != "ALL")
                     {
-                        Console.WriteLine("Argument -Fp is missing [Filter file], fill it to continue");
+                        Console.WriteLine(
+                            "Argument -Fp is missing [Filter file], fill it to continue"
+                        );
                         Environment.Exit(1);
                     }
                 }
-            }   
+            }
             return parameters;
         }
-
     }
-   
 }

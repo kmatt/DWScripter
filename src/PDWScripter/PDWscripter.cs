@@ -13,7 +13,7 @@ using System.Text.RegularExpressions;
 
 namespace DWScripter
 {
-   public class PDWscripter
+    public class PDWscripter
     {
         public SqlConnection conn;
         private SqlCommand cmd;
@@ -62,7 +62,6 @@ namespace DWScripter
         private string warningFile;
         public List<KeyValuePair<String, String>> DbObjectDefinitions;
 
-
         public PDWscripter()
         {
             cols = new List<ColumnDef>();
@@ -73,7 +72,21 @@ namespace DWScripter
             dbTables = new List<TableDef>();
             dbstruct = new DBStruct();
         }
-        public PDWscripter(string system, string server, string sourceDb, string authentication, string userName, string pwd, string wrkMode, string ExcludeObjectSuffixList, string SchemaFilter, string filterSpec, string scriptMode, string CommandTimeout)
+
+        public PDWscripter(
+            string system,
+            string server,
+            string sourceDb,
+            string authentication,
+            string userName,
+            string pwd,
+            string wrkMode,
+            string ExcludeObjectSuffixList,
+            string SchemaFilter,
+            string filterSpec,
+            string scriptMode,
+            string CommandTimeout
+        )
         {
             DatabaseName = sourceDb;
             cols = new List<ColumnDef>();
@@ -88,7 +101,7 @@ namespace DWScripter
             this.SchemaFilter = SchemaFilter;
             this.wrkMode = wrkMode;
             this.sourceDb = sourceDb;
-            this.destDb = sourceDb;         // For future DB cloning 
+            this.destDb = sourceDb; // For future DB cloning
             this.scriptMode = scriptMode;
             this.CommandTimeout = CommandTimeout;
 
@@ -104,31 +117,36 @@ namespace DWScripter
                     constrbuilder.UserID = userName;
                     constrbuilder.Password = pwd;
                     constrbuilder.IntegratedSecurity = false;
-
                 }
                 else
                 {
                     constrbuilder.IntegratedSecurity = true;
                 }
                 conn.ConnectionString = constrbuilder.ConnectionString;
-                
             }
             else
             {
-                conn.ConnectionString = "server=" + server + ";database=" + sourceDb + ";User ID=" + userName + ";Password=" + pwd;
+                conn.ConnectionString =
+                    "server="
+                    + server
+                    + ";database="
+                    + sourceDb
+                    + ";User ID="
+                    + userName
+                    + ";Password="
+                    + pwd;
             }
-
 
             cmd = new System.Data.SqlClient.SqlCommand();
             //sets non default timeout
-            if(!String.IsNullOrEmpty(this.CommandTimeout))
+            if (!String.IsNullOrEmpty(this.CommandTimeout))
             {
                 cmd.CommandTimeout = Convert.ToInt32(this.CommandTimeout);
-                
             }
             Console.WriteLine("Current Command Timeout: " + cmd.CommandTimeout);
 
-            try {
+            try
+            {
                 conn.Open();
                 cmd.Connection = conn;
             }
@@ -137,7 +155,6 @@ namespace DWScripter
                 Console.WriteLine(ex);
                 throw ex;
             }
-            
         }
 
         private void getSchemas(StreamWriter sw, Boolean GetStructure)
@@ -151,7 +168,8 @@ namespace DWScripter
             {
                 if (!GetStructure)
                 {
-                    createSchemaTxt = "CREATE SCHEMA [" + rdr.GetString(rdr.GetOrdinal("name")) + "];\r\nGO\r\n";
+                    createSchemaTxt =
+                        "CREATE SCHEMA [" + rdr.GetString(rdr.GetOrdinal("name")) + "];\r\nGO\r\n";
                     if (sw != null)
                         sw.WriteLine(createSchemaTxt);
                 }
@@ -162,7 +180,13 @@ namespace DWScripter
             rdr.Close();
         }
 
-        private void CompareSchemas(StreamWriter sw, PDWscripter cSource, PDWscripter cTarget, Boolean SourceFromFile, FilterSettings FilterSet)
+        private void CompareSchemas(
+            StreamWriter sw,
+            PDWscripter cSource,
+            PDWscripter cTarget,
+            Boolean SourceFromFile,
+            FilterSettings FilterSet
+        )
         {
             List<string> TargetSchemas = new List<string>();
             List<string> SourceSchemas = new List<string>();
@@ -172,7 +196,8 @@ namespace DWScripter
             String strStartWarningMessage = string.Empty;
             String strEndWarningMessage = string.Empty;
 
-            cTarget.cmd.CommandText = "select name from sys.schemas where name not in ('dbo','sys','INFORMATION_SCHEMA')";
+            cTarget.cmd.CommandText =
+                "select name from sys.schemas where name not in ('dbo','sys','INFORMATION_SCHEMA')";
 
             //==> SOURCE
             if (SourceFromFile)
@@ -181,7 +206,8 @@ namespace DWScripter
             }
             else
             {
-                cSource.cmd.CommandText = "select name from sys.schemas where name not in ('dbo','sys','INFORMATION_SCHEMA')";
+                cSource.cmd.CommandText =
+                    "select name from sys.schemas where name not in ('dbo','sys','INFORMATION_SCHEMA')";
                 rdr = cSource.cmd.ExecuteReader();
                 while (rdr.Read())
                 {
@@ -194,7 +220,6 @@ namespace DWScripter
             while (rdr.Read())
             {
                 TargetSchemas.Add(rdr.GetString(rdr.GetOrdinal("name")));
-
             }
             rdr.Close();
 
@@ -203,9 +228,10 @@ namespace DWScripter
             // COMPARE
             if (FilterSet.Granularity != "None")
             {
-                ListSchemasToCreate = (SourceSchemas.Intersect(FilterSet.GetSchemas())).Except(TargetSchemas).ToList();
+                ListSchemasToCreate = (SourceSchemas.Intersect(FilterSet.GetSchemas()))
+                    .Except(TargetSchemas)
+                    .ToList();
                 ListSchemasToDelete = new List<string>();
-              
             }
             else
             {
@@ -213,9 +239,14 @@ namespace DWScripter
                 ListSchemasToDelete = TargetSchemas.Except(SourceSchemas).ToList();
             }
 
-
-            string description = "/*####################################################################################################################################################*/\r\n";
-            description += "--schemas - to create =" + ListSchemasToCreate.Count.ToString() + " - to delete = " + ListSchemasToDelete.Count.ToString() + "\r\n";
+            string description =
+                "/*####################################################################################################################################################*/\r\n";
+            description +=
+                "--schemas - to create ="
+                + ListSchemasToCreate.Count.ToString()
+                + " - to delete = "
+                + ListSchemasToDelete.Count.ToString()
+                + "\r\n";
             description += "PRINT 'schemas creation'\r\nGO\r\n";
             sw.WriteLine(description);
             if (ListSchemasToDelete.Count > 0)
@@ -234,7 +265,6 @@ namespace DWScripter
                 dropSchemaTxt = "/* DROP SCHEMA " + schemaTobeDeleted + ";\r\nGO */\r\n";
 
                 dropscript.Append(dropSchemaTxt);
-
             }
 
             if (dropscript.Length > 0)
@@ -242,33 +272,44 @@ namespace DWScripter
                 createUseDbTxt = "USE " + cTarget.sourceDb + "\r\nGO\r\n";
                 strStartWarningMessage = "/* WARNING !!!! ======:  SCHEMAS TO DROP.\r\n";
                 strEndWarningMessage = "*/\r\n\r\n";
-                dropSchemaTxt = strStartWarningMessage + dropscript.ToString() + strEndWarningMessage;
+                dropSchemaTxt =
+                    strStartWarningMessage + dropscript.ToString() + strEndWarningMessage;
                 sw.WriteLine(dropSchemaTxt);
 
-                dropSchemaTxt = strStartWarningMessage + createUseDbTxt + dropscript.ToString() + strEndWarningMessage;
+                dropSchemaTxt =
+                    strStartWarningMessage
+                    + createUseDbTxt
+                    + dropscript.ToString()
+                    + strEndWarningMessage;
                 writeWarningtxt(dropSchemaTxt);
             }
-
-
         }
 
-        private void CompareDbTables(StreamWriter sw, PDWscripter cSource, PDWscripter cTarget, Boolean SourceFromFile, FilterSettings FilterSet)
+        private void CompareDbTables(
+            StreamWriter sw,
+            PDWscripter cSource,
+            PDWscripter cTarget,
+            Boolean SourceFromFile,
+            FilterSettings FilterSet
+        )
         {
-
             if (SourceFromFile)
             {
                 cSource.dbTables = new List<TableDef>();
                 foreach (TableSt tbl in cSource.dbstruct.tables)
                 {
-                    cSource.dbTables.Add(new TableDef(tbl.name, tbl.schema, tbl.distribution_policy));
+                    cSource.dbTables.Add(
+                        new TableDef(tbl.name, tbl.schema, tbl.distribution_policy)
+                    );
                 }
 
                 cTarget.dbTables = new List<TableDef>();
                 foreach (TableSt tbl in cTarget.dbstruct.tables)
                 {
-                    cTarget.dbTables.Add(new TableDef(tbl.name, tbl.schema, tbl.distribution_policy));
+                    cTarget.dbTables.Add(
+                        new TableDef(tbl.name, tbl.schema, tbl.distribution_policy)
+                    );
                 }
-
             }
 
             // COMPARE
@@ -279,28 +320,56 @@ namespace DWScripter
             List<TableDef> ListdbTablesSourceFiltered;
             List<TableDef> ListdbTablesTargetFiltered;
 
-
             switch (FilterSet.Granularity.ToUpper())
             {
                 case "SCHEMA":
-                    
-                    ListdbTablesSourceFiltered = cSource.dbTables.FindAll(delegate (TableDef tdef) { return FilterSet.GetSchemas().Contains(tdef.schema); });
-                    ListdbTablesTargetFiltered = cTarget.dbTables.FindAll(delegate (TableDef tdef) { return FilterSet.GetSchemas().Contains(tdef.schema); });
 
-                    ListdbTablesToCreate = ListdbTablesSourceFiltered.Except(ListdbTablesTargetFiltered).ToList();
-                    ListTablesToDelete = ListdbTablesTargetFiltered.Except(ListdbTablesSourceFiltered).ToList();
-                    ListTablesToBeAlter = ListdbTablesSourceFiltered.Intersect(ListdbTablesTargetFiltered).ToList();
+                    ListdbTablesSourceFiltered = cSource.dbTables.FindAll(
+                        delegate(TableDef tdef)
+                        {
+                            return FilterSet.GetSchemas().Contains(tdef.schema);
+                        }
+                    );
+                    ListdbTablesTargetFiltered = cTarget.dbTables.FindAll(
+                        delegate(TableDef tdef)
+                        {
+                            return FilterSet.GetSchemas().Contains(tdef.schema);
+                        }
+                    );
+
+                    ListdbTablesToCreate = ListdbTablesSourceFiltered
+                        .Except(ListdbTablesTargetFiltered)
+                        .ToList();
+                    ListTablesToDelete = ListdbTablesTargetFiltered
+                        .Except(ListdbTablesSourceFiltered)
+                        .ToList();
+                    ListTablesToBeAlter = ListdbTablesSourceFiltered
+                        .Intersect(ListdbTablesTargetFiltered)
+                        .ToList();
                     break;
 
                 case "OBJECTS":
 
-                    
-                    ListdbTablesSourceFiltered = cSource.dbTables.FindAll(delegate (TableDef Table) { return FilterSet.GetSchemaNameObjects().Contains(Table.name); });
-                    ListdbTablesTargetFiltered = cTarget.dbTables.FindAll(delegate (TableDef Table) { return FilterSet.GetSchemaNameObjects().Contains(Table.name); });
+                    ListdbTablesSourceFiltered = cSource.dbTables.FindAll(
+                        delegate(TableDef Table)
+                        {
+                            return FilterSet.GetSchemaNameObjects().Contains(Table.name);
+                        }
+                    );
+                    ListdbTablesTargetFiltered = cTarget.dbTables.FindAll(
+                        delegate(TableDef Table)
+                        {
+                            return FilterSet.GetSchemaNameObjects().Contains(Table.name);
+                        }
+                    );
 
-                    ListdbTablesToCreate = ListdbTablesSourceFiltered.Except(ListdbTablesTargetFiltered).ToList();
-                    ListTablesToBeAlter = ListdbTablesSourceFiltered.Intersect(ListdbTablesTargetFiltered).ToList();
-                    
+                    ListdbTablesToCreate = ListdbTablesSourceFiltered
+                        .Except(ListdbTablesTargetFiltered)
+                        .ToList();
+                    ListTablesToBeAlter = ListdbTablesSourceFiltered
+                        .Intersect(ListdbTablesTargetFiltered)
+                        .ToList();
+
                     break;
 
                 default:
@@ -310,10 +379,17 @@ namespace DWScripter
                     break;
             }
 
-
             bool bWarning = false;
-            string description = "/*####################################################################################################################################################*/\r\n";
-            description += "--tables - to create = " + ListdbTablesToCreate.Count.ToString() + " - to delete = " + ListTablesToDelete.Count.ToString() + " - to compare = " + ListTablesToBeAlter.Count.ToString() + "\r\n";
+            string description =
+                "/*####################################################################################################################################################*/\r\n";
+            description +=
+                "--tables - to create = "
+                + ListdbTablesToCreate.Count.ToString()
+                + " - to delete = "
+                + ListTablesToDelete.Count.ToString()
+                + " - to compare = "
+                + ListTablesToBeAlter.Count.ToString()
+                + "\r\n";
             description += "PRINT 'tables creation'\r\n";
             sw.WriteLine(description);
             if (ListTablesToDelete.Count > 0)
@@ -332,7 +408,6 @@ namespace DWScripter
                 }
                 else
                 {
-                    
                     bWarning = true;
                     cTarget.compBuildDropTableText(sw, bWarning);
                 }
@@ -341,7 +416,7 @@ namespace DWScripter
             // ==> To Create
             foreach (TableDef t in ListdbTablesToCreate)
             {
-                // case distribution change 
+                // case distribution change
                 if (!cTarget.dbTables.Exists(x => x.name == t.name))
                 {
                     cSource.sourceTable = t.name;
@@ -359,11 +434,9 @@ namespace DWScripter
             // ==> To ALTER
             foreach (TableDef t in ListTablesToBeAlter)
             {
-
                 cSource.buildAlterTableText(sw, cSource, cTarget, t, SourceFromFile);
             }
         }
-
 
         private void writeWarningtxt(string messagewarning)
         {
@@ -401,7 +474,9 @@ namespace DWScripter
                 Console.Write("\r\nDone\r\n");
                 if (generateFile)
                 {
-                    Console.Write("PersistStructure DDL to JSON file :" + outDBJsonDDLStructureFile + ">");
+                    Console.Write(
+                        "PersistStructure DDL to JSON file :" + outDBJsonDDLStructureFile + ">"
+                    );
                     if (outDBJsonDDLStructureFile != "")
                     {
                         fs = new FileStream(outDBJsonDDLStructureFile, FileMode.Create);
@@ -415,7 +490,8 @@ namespace DWScripter
             if (wrkMode == "ALL" || wrkMode == "DML")
             {
                 Console.Write("Getting " + this.sourceDb + " database DML structure");
-                cmd.CommandText = @" SELECT c.definition, b.name + '.' + a.name AS ObjectName
+                cmd.CommandText =
+                    @" SELECT c.definition, b.name + '.' + a.name AS ObjectName
                     FROM
                     sys.sql_modules c
                     INNER JOIN sys.objects a ON a.object_id = c.object_id
@@ -431,16 +507,28 @@ namespace DWScripter
                 {
                     IDataRecord record = (IDataRecord)rdr;
                     ModuleName = record[1].ToString();
-                    if ((!String.IsNullOrWhiteSpace(this.SchemaFilter) & rinc.IsMatch(ModuleName)) & !rexc.IsMatch(ModuleName))
+                    if (
+                        (!String.IsNullOrWhiteSpace(this.SchemaFilter) & rinc.IsMatch(ModuleName))
+                        & !rexc.IsMatch(ModuleName)
+                    )
                     {
                         Console.WriteLine(String.Format("Module: {0}", ModuleName));
 
-                        KeyValuePair<String, String> kvpObjNameDef = new KeyValuePair<String, String>(String.Format("{0}", record[1]), String.Format("{0}", record[0]).TrimEnd(new char[] { '\r', '\n', ' ' }));
+                        KeyValuePair<String, String> kvpObjNameDef = new KeyValuePair<
+                            String,
+                            String
+                        >(
+                            String.Format("{0}", record[1]),
+                            String.Format("{0}", record[0]).TrimEnd(new char[] { '\r', '\n', ' ' })
+                        );
                         if (!DbObjectDefinitions.Exists(objDef => objDef.Key == kvpObjNameDef.Key))
                         {
-
                             // Object doesn't exist
-                            if (!DbObjectDefinitions.Any(objDef => objDef.Value.Contains(kvpObjNameDef.Key)))
+                            if (
+                                !DbObjectDefinitions.Any(
+                                    objDef => objDef.Value.Contains(kvpObjNameDef.Key)
+                                )
+                            )
                             {
                                 // Object never used by an other object
                                 DbObjectDefinitions.Add(kvpObjNameDef);
@@ -448,7 +536,11 @@ namespace DWScripter
                             else
                             {
                                 // Object already used by an other object, we had it previously to the calling one
-                                int idxCallingObj = DbObjectDefinitions.IndexOf(DbObjectDefinitions.First(objDef => objDef.Value.Contains(kvpObjNameDef.Key)));
+                                int idxCallingObj = DbObjectDefinitions.IndexOf(
+                                    DbObjectDefinitions.First(
+                                        objDef => objDef.Value.Contains(kvpObjNameDef.Key)
+                                    )
+                                );
                                 DbObjectDefinitions.Insert(idxCallingObj, kvpObjNameDef);
                             }
                         }
@@ -462,7 +554,9 @@ namespace DWScripter
                     string outDBJsonDMLStructureFile = outFile + "_STRUCT_DML.json";
                     StreamWriter sw = null;
                     FileStream fs = null;
-                    Console.Write("PersistStructure DML to JSON file :" + outDBJsonDMLStructureFile + ">");
+                    Console.Write(
+                        "PersistStructure DML to JSON file :" + outDBJsonDMLStructureFile + ">"
+                    );
                     if (outDBJsonDMLStructureFile != "")
                     {
                         fs = new FileStream(outDBJsonDMLStructureFile, FileMode.Create);
@@ -473,6 +567,7 @@ namespace DWScripter
                 }
             }
         }
+
         public void getDbTables(Boolean getStructure)
         {
             dbTables.Clear();
@@ -480,43 +575,53 @@ namespace DWScripter
             Regex rinc = new Regex(this.SchemaFilter, RegexOptions.IgnoreCase);
             string TableName;
             cmd.CommandText =
-                "select schema_name(so.schema_id) + '.' + so.name as name, tdp.distribution_policy, schema_name(so.schema_id) as [schema] " +
-                "from sys.tables so left join sys.external_tables et on so.object_id = et.object_id " +
-                "JOIN sys.pdw_table_distribution_properties AS tdp ON so.object_id = tdp.object_id " +
-                "where et.name is NULL and so.type = 'U' " +
-                "and so.name like '" + filterSpec + "' " +
-                "order by so.name ";
+                "select schema_name(so.schema_id) + '.' + so.name as name, tdp.distribution_policy, schema_name(so.schema_id) as [schema] "
+                + "from sys.tables so left join sys.external_tables et on so.object_id = et.object_id "
+                + "JOIN sys.pdw_table_distribution_properties AS tdp ON so.object_id = tdp.object_id "
+                + "where et.name is NULL and so.type = 'U' "
+                + "and so.name like '"
+                + filterSpec
+                + "' "
+                + "order by so.name ";
 
             rdr = cmd.ExecuteReader();
 
-            if (rdr.HasRows)  
+            if (rdr.HasRows)
             {
                 while (rdr.Read())
                 {
                     TableName = rdr.GetString(rdr.GetOrdinal("name"));
-                    if ((!String.IsNullOrWhiteSpace(this.SchemaFilter) & rinc.IsMatch(TableName)) & !rexc.IsMatch(TableName))
-                        {
-                            Console.WriteLine(String.Format("Table: {0}", TableName));
+                    if (
+                        (!String.IsNullOrWhiteSpace(this.SchemaFilter) & rinc.IsMatch(TableName))
+                        & !rexc.IsMatch(TableName)
+                    )
+                    {
+                        Console.WriteLine(String.Format("Table: {0}", TableName));
 
-                            if (!getStructure)
-                            dbTables.Add(new TableDef(
-                                rdr.GetString(rdr.GetOrdinal("name")),
-                                rdr.GetString(rdr.GetOrdinal("schema")),
-                                rdr.GetByte(rdr.GetOrdinal("distribution_policy"))
-                                ));
+                        if (!getStructure)
+                            dbTables.Add(
+                                new TableDef(
+                                    rdr.GetString(rdr.GetOrdinal("name")),
+                                    rdr.GetString(rdr.GetOrdinal("schema")),
+                                    rdr.GetByte(rdr.GetOrdinal("distribution_policy"))
+                                )
+                            );
                         else
-                            dbstruct.tables.Add(new TableSt(rdr.GetString(rdr.GetOrdinal("name")), rdr.GetString(rdr.GetOrdinal("schema")),
-                            rdr.GetByte(rdr.GetOrdinal("distribution_policy"))
-                            ));
-                }
+                            dbstruct.tables.Add(
+                                new TableSt(
+                                    rdr.GetString(rdr.GetOrdinal("name")),
+                                    rdr.GetString(rdr.GetOrdinal("schema")),
+                                    rdr.GetByte(rdr.GetOrdinal("distribution_policy"))
+                                )
+                            );
+                    }
                 }
             }
             rdr.Close();
-
         }
+
         private void getSourceColumnsGlobal()
         {
-
             List<ColumnDef> columns = new List<ColumnDef>();
             string TableKey = "";
             string SchemaName;
@@ -524,7 +629,7 @@ namespace DWScripter
             string tableKeyPrevious = "";
             TableSt TableStruct = new TableSt();
             cmd.CommandText =
-                   @"select  schema_name(tbl.schema_id) as SchemaName,tbl.Name as TableName, c.column_id, c.name, t.name as type, c.max_length, c.precision,
+                @"select  schema_name(tbl.schema_id) as SchemaName,tbl.Name as TableName, c.column_id, c.name, t.name as type, c.max_length, c.precision,
                         c.scale, c.is_nullable, d.distribution_ordinal, c.collation_name, ISNULL('DEFAULT ' + dc.definition, '') as DefaultConstraint
                     from sys.columns c
                     join sys.pdw_column_distribution_properties d
@@ -536,24 +641,24 @@ namespace DWScripter
             rdr = cmd.ExecuteReader();
 
             while (rdr.Read())
+            {
+                SchemaName = rdr.GetString(rdr.GetOrdinal("SchemaName"));
+                TableName = rdr.GetString(rdr.GetOrdinal("TableName"));
+                TableKey = SchemaName + "." + TableName;
+                if (TableKey != tableKeyPrevious)
                 {
-                    SchemaName = rdr.GetString(rdr.GetOrdinal("SchemaName"));
-                    TableName = rdr.GetString(rdr.GetOrdinal("TableName"));
-                    TableKey = SchemaName + "." + TableName;
-                    if (TableKey != tableKeyPrevious)
+                    if (columns.Count != 0 && (TableStruct != null))
                     {
-                        if (columns.Count != 0 && (TableStruct != null))
-                        {
-                            TableStruct.Columns = columns;
-                        }
-                        TableStruct = this.dbstruct.GetTable(TableKey);
-
-
-                        columns = new List<ColumnDef>();
-                        tableKeyPrevious = TableKey;
+                        TableStruct.Columns = columns;
                     }
+                    TableStruct = this.dbstruct.GetTable(TableKey);
 
-                    columns.Add(new ColumnDef(
+                    columns = new List<ColumnDef>();
+                    tableKeyPrevious = TableKey;
+                }
+
+                columns.Add(
+                    new ColumnDef(
                         rdr.GetInt32(rdr.GetOrdinal("column_id")),
                         rdr.GetString(rdr.GetOrdinal("name")),
                         rdr.GetString(rdr.GetOrdinal("type")),
@@ -563,18 +668,20 @@ namespace DWScripter
                         rdr.GetBoolean(rdr.GetOrdinal("is_nullable")),
                         rdr.GetByte(rdr.GetOrdinal("distribution_ordinal")),
                         rdr.GetString(rdr.GetOrdinal("DefaultConstraint")),
-                        rdr["collation_name"] == DBNull.Value ? string.Empty : (string)rdr["collation_name"]
-                        ));
-
-                }
+                        rdr["collation_name"] == DBNull.Value
+                            ? string.Empty
+                            : (string)rdr["collation_name"]
+                    )
+                );
+            }
             if (columns.Count != 0 && (TableStruct != null))
             {
                 TableStruct.Columns = columns;
             }
-        
-            rdr.Close();
 
-            }
+            rdr.Close();
+        }
+
         private void getSourceColumns(Boolean getStruture, Boolean SourceFromFile)
         {
             cols.Clear();
@@ -588,34 +695,40 @@ namespace DWScripter
             if (!SourceFromFile)
             {
                 cmd.CommandText =
-                    "select c.column_id, c.name, t.name as type, c.max_length, c.precision," +
-                    "c.scale, c.is_nullable, d.distribution_ordinal, c.collation_name, ISNULL('DEFAULT '+dc.definition,'') as DefaultConstraint " +
-                    "from sys.columns c " +
-                    "join sys.pdw_column_distribution_properties d " +
-                        "on c.object_id = d.object_id and c.column_id = d.column_id " +
-                    "join sys.types t on t.user_type_id = c.user_type_id " +
-                    "left join sys.default_constraints dc on c.default_object_id =dc.object_id and c.object_id =dc.parent_object_id " +
-                    "where c.object_id = (select object_id from sys.tables where schema_name(schema_id) + '.' + name = '" + sourceTable + "') " +
-                    "order by Column_Id ";
+                    "select c.column_id, c.name, t.name as type, c.max_length, c.precision,"
+                    + "c.scale, c.is_nullable, d.distribution_ordinal, c.collation_name, ISNULL('DEFAULT '+dc.definition,'') as DefaultConstraint "
+                    + "from sys.columns c "
+                    + "join sys.pdw_column_distribution_properties d "
+                    + "on c.object_id = d.object_id and c.column_id = d.column_id "
+                    + "join sys.types t on t.user_type_id = c.user_type_id "
+                    + "left join sys.default_constraints dc on c.default_object_id =dc.object_id and c.object_id =dc.parent_object_id "
+                    + "where c.object_id = (select object_id from sys.tables where schema_name(schema_id) + '.' + name = '"
+                    + sourceTable
+                    + "') "
+                    + "order by Column_Id ";
 
                 rdr = cmd.ExecuteReader();
 
-                if (rdr.HasRows) 
+                if (rdr.HasRows)
                 {
                     while (rdr.Read())
                     {
-                        cols.Add(new ColumnDef(
-                            rdr.GetInt32(rdr.GetOrdinal("column_id")),
-                            rdr.GetString(rdr.GetOrdinal("name")),
-                            rdr.GetString(rdr.GetOrdinal("type")),
-                            rdr.GetInt16(rdr.GetOrdinal("max_length")),
-                            rdr.GetByte(rdr.GetOrdinal("precision")),
-                            rdr.GetByte(rdr.GetOrdinal("scale")),
-                            rdr.GetBoolean(rdr.GetOrdinal("is_nullable")),
-                            rdr.GetByte(rdr.GetOrdinal("distribution_ordinal")),
-                            rdr.GetString(rdr.GetOrdinal("DefaultConstraint")),
-                            rdr["collation_name"] == DBNull.Value ? string.Empty : (string)rdr["collation_name"]
-                            ));
+                        cols.Add(
+                            new ColumnDef(
+                                rdr.GetInt32(rdr.GetOrdinal("column_id")),
+                                rdr.GetString(rdr.GetOrdinal("name")),
+                                rdr.GetString(rdr.GetOrdinal("type")),
+                                rdr.GetInt16(rdr.GetOrdinal("max_length")),
+                                rdr.GetByte(rdr.GetOrdinal("precision")),
+                                rdr.GetByte(rdr.GetOrdinal("scale")),
+                                rdr.GetBoolean(rdr.GetOrdinal("is_nullable")),
+                                rdr.GetByte(rdr.GetOrdinal("distribution_ordinal")),
+                                rdr.GetString(rdr.GetOrdinal("DefaultConstraint")),
+                                rdr["collation_name"] == DBNull.Value
+                                    ? string.Empty
+                                    : (string)rdr["collation_name"]
+                            )
+                        );
                     }
 
                     rdr.Close();
@@ -632,7 +745,7 @@ namespace DWScripter
             }
 
             cols.Sort((a, b) => a.column_id.CompareTo(b.column_id));
-        
+
             foreach (ColumnDef c in cols)
             {
                 StringBuilder columnDefinition = new StringBuilder();
@@ -656,39 +769,34 @@ namespace DWScripter
                 columnDefinition.Append("[" + c.name + "]" + "\t" + c.type + "\t");
                 columnspec.Append("[" + c.name + "]" + "\t" + c.type + "\t");
                 columnSelect.Append(c.name);
-                if (c.type == "bigint" ||
-                    c.type == "bit" ||
-                    c.type == "date" ||
-                    c.type == "datetime" ||
-                    c.type == "int" ||
-                    c.type == "smalldatetime" ||
-                    c.type == "smallint" ||
-                    c.type == "smallmoney" ||
-                    c.type == "money" ||
-                    c.type == "tinyint" ||
-                    c.type == "real")
+                if (
+                    c.type == "bigint"
+                    || c.type == "bit"
+                    || c.type == "date"
+                    || c.type == "datetime"
+                    || c.type == "int"
+                    || c.type == "smalldatetime"
+                    || c.type == "smallint"
+                    || c.type == "smallmoney"
+                    || c.type == "money"
+                    || c.type == "tinyint"
+                    || c.type == "real"
+                )
                 {
                     // no size params
                 }
-
-                else if (
-                    c.type == "binary" ||
-                    c.type == "varbinary")
+                else if (c.type == "binary" || c.type == "varbinary")
                 {
                     // max_length only
                     columnspec.Append("(");
                     columnspec.Append(c.max_length);
                     columnspec.Append(")\t");
 
-
                     columnDefinition.Append("(");
                     columnDefinition.Append(c.max_length);
                     columnDefinition.Append(")\t");
                 }
-
-                else if (
-                    c.type == "char" ||
-                    c.type == "varchar")
+                else if (c.type == "char" || c.type == "varchar")
                 {
                     // max_length only
                     columnspec.Append("(");
@@ -705,10 +813,7 @@ namespace DWScripter
                     columnDefinition.Append(c.collation_name);
                     columnDefinition.Append("\t");
                 }
-
-                else if (
-                    c.type == "nchar" ||
-                    c.type == "nvarchar")
+                else if (c.type == "nchar" || c.type == "nvarchar")
                 {
                     // max_length only
                     columnspec.Append("(");
@@ -725,25 +830,18 @@ namespace DWScripter
                     columnDefinition.Append(c.collation_name);
                     columnDefinition.Append("\t");
                 }
-
-                else if (
-                    c.type == "float")
+                else if (c.type == "float")
                 {
                     // precision only
                     columnspec.Append("(");
                     columnspec.Append(c.precision);
                     columnspec.Append(")\t");
 
-
                     columnDefinition.Append("(");
                     columnDefinition.Append(c.precision);
                     columnDefinition.Append(")\t");
                 }
-
-                else if (
-                    c.type == "datetime2" ||
-                    c.type == "datetimeoffset" ||
-                    c.type == "time")
+                else if (c.type == "datetime2" || c.type == "datetimeoffset" || c.type == "time")
                 {
                     // Scale only
                     columnspec.Append("(");
@@ -754,10 +852,7 @@ namespace DWScripter
                     columnDefinition.Append(c.scale);
                     columnDefinition.Append(")\t");
                 }
-
-                else if (
-                    c.type == "decimal" ||
-                    c.type == "numeric")
+                else if (c.type == "decimal" || c.type == "numeric")
                 {
                     // Precision and Scale
                     columnspec.Append("(");
@@ -772,14 +867,20 @@ namespace DWScripter
                     columnDefinition.Append(c.scale);
                     columnDefinition.Append(")\t");
                 }
-
                 else
                 {
-                    Exception e = new Exception("Unsupported Type " + c.type + " for column : "+c.name+" - Table : "+ sourceTable);
+                    Exception e = new Exception(
+                        "Unsupported Type "
+                            + c.type
+                            + " for column : "
+                            + c.name
+                            + " - Table : "
+                            + sourceTable
+                    );
                     throw e;
                 }
 
-                columnspec.Append(c.is_nullable ? "NULL" : "NOT NULL"); 
+                columnspec.Append(c.is_nullable ? "NULL" : "NOT NULL");
 
                 columnDefinition.Append(c.is_nullable ? "NULL" : "NOT NULL");
 
@@ -787,7 +888,6 @@ namespace DWScripter
                 ColumnDef current = cols[cols.IndexOf(c)];
                 current.columnDefinition = columnDefinition.ToString();
                 tempCols.Add(current);
-
             }
             columnClause = columnspec.ToString();
 
@@ -796,9 +896,12 @@ namespace DWScripter
             if (cols.Count == 0)
             {
                 // invalid query
-                throw new Exception("Unable to retrieve column data for " + sourceTable + " in database " + sourceDb);
+                throw new Exception(
+                    "Unable to retrieve column data for " + sourceTable + " in database " + sourceDb
+                );
             }
         }
+
         private void getClusteredIndexGlobal()
         {
             clusteredCols.Clear();
@@ -811,13 +914,13 @@ namespace DWScripter
             string clusterindexnamePrevious = string.Empty;
 
             cmd.CommandText =
-               "select schema_name(tbl.schema_id) as SchemaName,tbl.Name as TableName,i.key_ordinal, c.name, i.is_descending_key, si.[type] as index_type ,si.name as indexname " +
-               "from sys.indexes si " +
-               "inner join sys.tables tbl on tbl.object_id=Si.object_id and tbl.type = 'U' " +
-               "left join sys.index_columns i on i.object_id = si.object_id " +
-               "left join sys.columns c on c.column_id = i.column_id and c.object_id = i.object_id " +
-               "where i.index_id = 1 and si.[type] <> 2 " +
-               "order by schema_name(tbl.schema_id),tbl.name,key_ordinal ";
+                "select schema_name(tbl.schema_id) as SchemaName,tbl.Name as TableName,i.key_ordinal, c.name, i.is_descending_key, si.[type] as index_type ,si.name as indexname "
+                + "from sys.indexes si "
+                + "inner join sys.tables tbl on tbl.object_id=Si.object_id and tbl.type = 'U' "
+                + "left join sys.index_columns i on i.object_id = si.object_id "
+                + "left join sys.columns c on c.column_id = i.column_id and c.object_id = i.object_id "
+                + "where i.index_id = 1 and si.[type] <> 2 "
+                + "order by schema_name(tbl.schema_id),tbl.name,key_ordinal ";
 
             rdr = cmd.ExecuteReader();
 
@@ -839,22 +942,24 @@ namespace DWScripter
                     tableKeyPrevious = TableKey;
                     clusterindexnamePrevious = clusterindexname;
                 }
-     
-                clusteredCols.Add(new IndexColumnDef(
-                    rdr.GetByte(rdr.GetOrdinal("key_ordinal")),
-                    rdr.GetString(rdr.GetOrdinal("name")),
-                    rdr.GetBoolean(rdr.GetOrdinal("is_descending_key")),
-                    rdr.GetByte(rdr.GetOrdinal("index_type"))
-                    ));
-                }
+
+                clusteredCols.Add(
+                    new IndexColumnDef(
+                        rdr.GetByte(rdr.GetOrdinal("key_ordinal")),
+                        rdr.GetString(rdr.GetOrdinal("name")),
+                        rdr.GetBoolean(rdr.GetOrdinal("is_descending_key")),
+                        rdr.GetByte(rdr.GetOrdinal("index_type"))
+                    )
+                );
+            }
             if (TableKey != "" && TableStruct != null)
             {
                 TableStruct.clusteredcols.AddRange(clusteredCols);
                 TableStruct.ClusteredIndexName = clusterindexname;
             }
             rdr.Close();
-
         }
+
         private void getClusteredIndex(Boolean GetStructure, Boolean SourceFromFile)
         {
             clusteredCols.Clear();
@@ -864,32 +969,35 @@ namespace DWScripter
 
             if (!SourceFromFile)
             {
-
                 cmd.CommandText =
-                "select i.key_ordinal, c.name, i.is_descending_key, si.[type] as index_type ,si.name as indexname " +
-                "from sys.indexes si " +
-                "left join sys.index_columns i on i.object_id = si.object_id " +
-                "left join sys.columns c on c.column_id = i.column_id and c.object_id = i.object_id " +
-                "where i.index_id = 1 and si.[type] <> 2 and " +
-                "i.object_id = (select object_id from sys.tables where schema_name(schema_id) + '.' + name = '" + sourceTable + "') " +
-                "and i.partition_ordinal = 0" + 
-                "order by key_ordinal ";
+                    "select i.key_ordinal, c.name, i.is_descending_key, si.[type] as index_type ,si.name as indexname "
+                    + "from sys.indexes si "
+                    + "left join sys.index_columns i on i.object_id = si.object_id "
+                    + "left join sys.columns c on c.column_id = i.column_id and c.object_id = i.object_id "
+                    + "where i.index_id = 1 and si.[type] <> 2 and "
+                    + "i.object_id = (select object_id from sys.tables where schema_name(schema_id) + '.' + name = '"
+                    + sourceTable
+                    + "') "
+                    + "and i.partition_ordinal = 0"
+                    + "order by key_ordinal ";
 
                 rdr = cmd.ExecuteReader();
                 string clusterindexname = string.Empty;
-                if (rdr.HasRows)  
+                if (rdr.HasRows)
                 {
                     while (rdr.Read())
                     {
                         if (clusterindexname == string.Empty)
                             clusterindexname = rdr.GetString(rdr.GetOrdinal("indexname"));
 
-                        clusteredCols.Add(new IndexColumnDef(
-                            rdr.GetByte(rdr.GetOrdinal("key_ordinal")),
-                            rdr.GetString(rdr.GetOrdinal("name")),
-                            rdr.GetBoolean(rdr.GetOrdinal("is_descending_key")),
-                            rdr.GetByte(rdr.GetOrdinal("index_type"))
-                            ));
+                        clusteredCols.Add(
+                            new IndexColumnDef(
+                                rdr.GetByte(rdr.GetOrdinal("key_ordinal")),
+                                rdr.GetString(rdr.GetOrdinal("name")),
+                                rdr.GetBoolean(rdr.GetOrdinal("is_descending_key")),
+                                rdr.GetByte(rdr.GetOrdinal("index_type"))
+                            )
+                        );
                     }
                 }
                 rdr.Close();
@@ -906,7 +1014,6 @@ namespace DWScripter
                 // get definition from file structure
                 clusteredCols = dbstruct.GetTable(sourceTable).clusteredcols;
             }
-
 
             foreach (IndexColumnDef i in clusteredCols.OrderBy(o => o.key_ordinal))
             {
@@ -933,6 +1040,7 @@ namespace DWScripter
 
             clusteredClause = clusteredspec.ToString();
         }
+
         private void getNonclusteredIndexesGlobal()
         {
             nonclusteredIndexes.Clear();
@@ -945,7 +1053,8 @@ namespace DWScripter
             string idxname = "";
             NonclusteredIndexDef ncidef = null;
 
-            cmd.CommandText = @"select tbl.Name as TableName,schema_name(schema_id) as SchemaName,ix.name as index_name, i.key_ordinal, c.name, i.is_descending_key
+            cmd.CommandText =
+                @"select tbl.Name as TableName,schema_name(schema_id) as SchemaName,ix.name as index_name, i.key_ordinal, c.name, i.is_descending_key
                                 from sys.index_columns i
                                 inner join sys.tables tbl on tbl.object_id = i.object_id and tbl.type = 'U'
                                 join sys.indexes ix on ix.index_id = i.index_id and ix.object_id = i.object_id
@@ -955,22 +1064,22 @@ namespace DWScripter
                                 order by schema_name(tbl.schema_id),tbl.name,ix.name, key_ordinal";
             rdr = cmd.ExecuteReader();
 
-           while (rdr.Read())
+            while (rdr.Read())
+            {
+                SchemaName = rdr.GetString(rdr.GetOrdinal("SchemaName"));
+                TableName = rdr.GetString(rdr.GetOrdinal("TableName"));
+                idxname = rdr.GetString(rdr.GetOrdinal("index_name"));
+                TableKey = SchemaName + "." + TableName;
+                if (TableKey != tableKeyPrevious)
                 {
-                    SchemaName = rdr.GetString(rdr.GetOrdinal("SchemaName"));
-                    TableName = rdr.GetString(rdr.GetOrdinal("TableName"));
-                    idxname = rdr.GetString(rdr.GetOrdinal("index_name"));
-                    TableKey = SchemaName + "." + TableName;
-                    if (TableKey != tableKeyPrevious)
+                    if (nonclusteredIndexes.Count != 0 && TableStruct != null)
                     {
-                        if (nonclusteredIndexes.Count != 0 && TableStruct != null)
-                        {
-                            TableStruct.nonclusteredIndexes.AddRange(nonclusteredIndexes);
-                        }
-                        TableStruct = this.dbstruct.GetTable(TableKey);
-                        nonclusteredIndexes.Clear();
-                        tableKeyPrevious = TableKey;
+                        TableStruct.nonclusteredIndexes.AddRange(nonclusteredIndexes);
                     }
+                    TableStruct = this.dbstruct.GetTable(TableKey);
+                    nonclusteredIndexes.Clear();
+                    tableKeyPrevious = TableKey;
+                }
 
                 if (TableStruct != null)
                 {
@@ -982,17 +1091,22 @@ namespace DWScripter
                         TableStruct.nonclusteredIndexes.Add(new NonclusteredIndexDef(idxname));
                     }
 
-                    TableStruct.GetIndex(idxname).cols.Add(new IndexColumnDef(
-                          rdr.GetByte(rdr.GetOrdinal("key_ordinal")),
-                          rdr.GetString(rdr.GetOrdinal("name")),
-                          rdr.GetBoolean(rdr.GetOrdinal("is_descending_key")),
-                          0
-                          ));
+                    TableStruct
+                        .GetIndex(idxname)
+                        .cols.Add(
+                            new IndexColumnDef(
+                                rdr.GetByte(rdr.GetOrdinal("key_ordinal")),
+                                rdr.GetString(rdr.GetOrdinal("name")),
+                                rdr.GetBoolean(rdr.GetOrdinal("is_descending_key")),
+                                0
+                            )
+                        );
                 }
-                }
-            
+            }
+
             rdr.Close();
         }
+
         private void getNonclusteredIndexes(Boolean GetStructure, Boolean SourceFromFile)
         {
             nonclusteredIndexes.Clear();
@@ -1001,18 +1115,21 @@ namespace DWScripter
             if (!SourceFromFile)
             {
                 cmd.CommandText =
-                    "select ix.name as index_name, i.key_ordinal, c.name, i.is_descending_key " +
-                    "from sys.index_columns i " +
-                    "join sys.indexes ix on ix.index_id = i.index_id and ix.object_id = i.object_id " +
-                    "join sys.columns c on c.column_id = i.column_id  and c.object_id = ix.object_id " +
-                    "where i.key_ordinal > 0 and " +
-                    "i.object_id = (select object_id from sys.tables where schema_name(schema_id) + '.' + name = '" + sourceTable + "') and " +
-                    "i.index_id > 1 " +   // NonClustered Indexes
+                    "select ix.name as index_name, i.key_ordinal, c.name, i.is_descending_key "
+                    + "from sys.index_columns i "
+                    + "join sys.indexes ix on ix.index_id = i.index_id and ix.object_id = i.object_id "
+                    + "join sys.columns c on c.column_id = i.column_id  and c.object_id = ix.object_id "
+                    + "where i.key_ordinal > 0 and "
+                    + "i.object_id = (select object_id from sys.tables where schema_name(schema_id) + '.' + name = '"
+                    + sourceTable
+                    + "') and "
+                    + "i.index_id > 1 "
+                    + // NonClustered Indexes
                     "order by ix.name, key_ordinal ";
 
                 rdr = cmd.ExecuteReader();
 
-                if (rdr.HasRows)  
+                if (rdr.HasRows)
                 {
                     string idxname = "";
                     NonclusteredIndexDef ncidef = null;
@@ -1028,28 +1145,33 @@ namespace DWScripter
                             {
                                 dbstruct.GetTable(sourceTable).nonclusteredIndexes.Add(ncidef);
                             }
-
                         }
 
                         if (!GetStructure)
                         {
-                            ncidef.cols.Add(new IndexColumnDef(
-                                rdr.GetByte(rdr.GetOrdinal("key_ordinal")),
-                                rdr.GetString(rdr.GetOrdinal("name")),
-                                rdr.GetBoolean(rdr.GetOrdinal("is_descending_key")),
-                                0
-                                ));
+                            ncidef.cols.Add(
+                                new IndexColumnDef(
+                                    rdr.GetByte(rdr.GetOrdinal("key_ordinal")),
+                                    rdr.GetString(rdr.GetOrdinal("name")),
+                                    rdr.GetBoolean(rdr.GetOrdinal("is_descending_key")),
+                                    0
+                                )
+                            );
                         }
                         else
                         {
-                            dbstruct.GetTable(sourceTable).GetIndex(idxname).cols.Add(new IndexColumnDef(
-                                rdr.GetByte(rdr.GetOrdinal("key_ordinal")),
-                                rdr.GetString(rdr.GetOrdinal("name")),
-                                rdr.GetBoolean(rdr.GetOrdinal("is_descending_key")),
-                                0
-                                ));
+                            dbstruct
+                                .GetTable(sourceTable)
+                                .GetIndex(idxname)
+                                .cols.Add(
+                                    new IndexColumnDef(
+                                        rdr.GetByte(rdr.GetOrdinal("key_ordinal")),
+                                        rdr.GetString(rdr.GetOrdinal("name")),
+                                        rdr.GetBoolean(rdr.GetOrdinal("is_descending_key")),
+                                        0
+                                    )
+                                );
                         }
-
                     }
                 }
 
@@ -1065,7 +1187,15 @@ namespace DWScripter
             }
             foreach (NonclusteredIndexDef ncidef in nonclusteredIndexes)
             {
-                nonclusteredspec.Append("CREATE INDEX [" + ncidef.name + "] ON [" + destDb + "].[" + destTable.Replace(".", "].[") + "] ");
+                nonclusteredspec.Append(
+                    "CREATE INDEX ["
+                        + ncidef.name
+                        + "] ON ["
+                        + destDb
+                        + "].["
+                        + destTable.Replace(".", "].[")
+                        + "] "
+                );
                 foreach (IndexColumnDef i in ncidef.cols)
                 {
                     if (i.key_ordinal > 1)
@@ -1076,7 +1206,9 @@ namespace DWScripter
                     {
                         nonclusteredspec.Append("\r\n(");
                     }
-                    nonclusteredspec.Append("[" + i.name + "]" + (i.is_descending_key ? " DESC " : ""));
+                    nonclusteredspec.Append(
+                        "[" + i.name + "]" + (i.is_descending_key ? " DESC " : "")
+                    );
                 }
                 nonclusteredspec.Append(");\r\n");
             }
@@ -1095,15 +1227,14 @@ namespace DWScripter
             TableSt TableStruct = new TableSt();
             string statnamePrevious = "";
 
-
             cmd.CommandText =
-               "select schema_name(tbl.schema_id) as SchemaName,tbl.name as TableName,s.name as stat_name, sc.stats_column_id, c.name " +
-               "from sys.stats s " +
-                "inner join sys.tables tbl on tbl.object_id=s.object_id and tbl.type = 'U' " +
-               "join sys.stats_columns sc on s.stats_id = sc.stats_id and s.object_id = sc.object_id " +
-               "join sys.columns c on c.column_id = sc.column_id  and c.object_id = sc.object_id " +
-              "and user_created=1 " +
-               "order by schema_name(tbl.schema_id),tbl.name,s.name, sc.stats_column_id ";
+                "select schema_name(tbl.schema_id) as SchemaName,tbl.name as TableName,s.name as stat_name, sc.stats_column_id, c.name "
+                + "from sys.stats s "
+                + "inner join sys.tables tbl on tbl.object_id=s.object_id and tbl.type = 'U' "
+                + "join sys.stats_columns sc on s.stats_id = sc.stats_id and s.object_id = sc.object_id "
+                + "join sys.columns c on c.column_id = sc.column_id  and c.object_id = sc.object_id "
+                + "and user_created=1 "
+                + "order by schema_name(tbl.schema_id),tbl.name,s.name, sc.stats_column_id ";
 
             rdr = cmd.ExecuteReader();
 
@@ -1134,16 +1265,18 @@ namespace DWScripter
                         statnamePrevious = statname;
                     }
 
-                    statdef.cols.Add(new StatColumnDef(
-                        rdr.GetInt32(rdr.GetOrdinal("stats_column_id")),
-                        rdr.GetString(rdr.GetOrdinal("name"))
-                        ));
+                    statdef.cols.Add(
+                        new StatColumnDef(
+                            rdr.GetInt32(rdr.GetOrdinal("stats_column_id")),
+                            rdr.GetString(rdr.GetOrdinal("name"))
+                        )
+                    );
                 }
+            }
 
-                }
-
-           rdr.Close();
+            rdr.Close();
         }
+
         private void getStats(Boolean GetStructure, Boolean SourceFromFile)
         {
             stats.Clear();
@@ -1153,44 +1286,47 @@ namespace DWScripter
             if (!SourceFromFile)
             {
                 cmd.CommandText =
-                "select s.name as stat_name, sc.stats_column_id, c.name, has_filter, filter_definition " +
-                "from sys.stats s " +
-                "join sys.stats_columns sc on s.stats_id = sc.stats_id and s.object_id = sc.object_id " +
-                "join sys.columns c on c.column_id = sc.column_id  and c.object_id = sc.object_id " +
-                "where s.object_id = (select object_id from sys.tables where schema_name(schema_id) + '.' + name = '" + sourceTable + "') " +
-                "and user_created=1 " +
-                "order by s.name, sc.stats_column_id ";
+                    "select s.name as stat_name, sc.stats_column_id, c.name, has_filter, filter_definition "
+                    + "from sys.stats s "
+                    + "join sys.stats_columns sc on s.stats_id = sc.stats_id and s.object_id = sc.object_id "
+                    + "join sys.columns c on c.column_id = sc.column_id  and c.object_id = sc.object_id "
+                    + "where s.object_id = (select object_id from sys.tables where schema_name(schema_id) + '.' + name = '"
+                    + sourceTable
+                    + "') "
+                    + "and user_created=1 "
+                    + "order by s.name, sc.stats_column_id ";
 
                 rdr = cmd.ExecuteReader();
 
-                if (rdr.HasRows)  
+                if (rdr.HasRows)
                 {
                     string statname = "";
                     StatDef statdef = null;
                     while (rdr.Read())
                     {
-                            if (statname != rdr.GetString(rdr.GetOrdinal("stat_name")))
-                            {
-                                statname = rdr.GetString(rdr.GetOrdinal("stat_name"));
-                                statdef = new StatDef(statname);
-                                if (!(rdr.IsDBNull(rdr.GetOrdinal("filter_definition"))))
+                        if (statname != rdr.GetString(rdr.GetOrdinal("stat_name")))
+                        {
+                            statname = rdr.GetString(rdr.GetOrdinal("stat_name"));
+                            statdef = new StatDef(statname);
+                            if (!(rdr.IsDBNull(rdr.GetOrdinal("filter_definition"))))
                                 statdef.filter = rdr.GetString(rdr.GetOrdinal("filter_definition"));
-                                stats.Add(statdef);
-                                if (!GetStructure)
-                                {
-                                    //no further steps needed
-                                }
-                                else
-                                {
-                                    //adding stat definition to database structure
-                                    dbstruct.GetTable(sourceTable).statistics.Add(statdef);
-                                }                        
-                                
+                            stats.Add(statdef);
+                            if (!GetStructure)
+                            {
+                                //no further steps needed
                             }
-                            statdef.cols.Add(new StatColumnDef(
+                            else
+                            {
+                                //adding stat definition to database structure
+                                dbstruct.GetTable(sourceTable).statistics.Add(statdef);
+                            }
+                        }
+                        statdef.cols.Add(
+                            new StatColumnDef(
                                 rdr.GetInt32(rdr.GetOrdinal("stats_column_id")),
                                 rdr.GetString(rdr.GetOrdinal("name"))
-                                ));
+                            )
+                        );
                     }
                 }
 
@@ -1207,13 +1343,12 @@ namespace DWScripter
             }
             foreach (StatDef statdef in stats)
             {
-                statspec.Append(buildCreateStatisticsText(statdef,destTable));
-
+                statspec.Append(buildCreateStatisticsText(statdef, destTable));
             }
             statsClause = statspec.ToString();
         }
 
-        private void getPartitioningGlobal ()
+        private void getPartitioningGlobal()
         {
             string TableKey = "";
             string SchemaName;
@@ -1226,7 +1361,8 @@ namespace DWScripter
             StringBuilder partitionspec = new StringBuilder();
             partitionBoundaries.Clear();
 
-            cmd.CommandText = @"select schema_name(tbl.schema_id) as SchemaName,tbl.name as TableName,c.name,pf.boundary_value_on_right
+            cmd.CommandText =
+                @"select schema_name(tbl.schema_id) as SchemaName,tbl.name as TableName,c.name,pf.boundary_value_on_right
                                 from sys.tables tbl
                                 join sys.indexes i on (i.object_id = tbl.object_id and i.index_id < 2) 
 			                    join sys.index_columns ic on(ic.partition_ordinal > 0 and ic.index_id = i.index_id and ic.object_id = tbl.object_id)
@@ -1243,18 +1379,22 @@ namespace DWScripter
                 SchemaName = rdr.GetString(rdr.GetOrdinal("SchemaName"));
                 TableName = rdr.GetString(rdr.GetOrdinal("TableName"));
                 partitionColumn = rdr.GetString(rdr.GetOrdinal("name"));
-                partitionLeftOrRight = ((bool)rdr.GetBoolean(rdr.GetOrdinal("boundary_value_on_right")) ? "RIGHT" : "LEFT");
+                partitionLeftOrRight = (
+                    (bool)rdr.GetBoolean(rdr.GetOrdinal("boundary_value_on_right"))
+                        ? "RIGHT"
+                        : "LEFT"
+                );
                 TableKey = SchemaName + "." + TableName;
-              
+
                 TableStruct = this.dbstruct.GetTable(TableKey);
                 TableStruct.DBPartition.partitionColumn = partitionColumn;
                 TableStruct.DBPartition.partitionLeftOrRight = partitionLeftOrRight;
-
             }
             rdr.Close();
             // get partitions boundaries
             TableStruct = new TableSt();
-            cmd.CommandText = @"select  schema_name(tbl.schema_id) as SchemaName,tbl.name as TableName,cast(sp.partition_number as int) as partition_number , prv.value as boundary_value, lower(sty.name) as boundary_value_type 
+            cmd.CommandText =
+                @"select  schema_name(tbl.schema_id) as SchemaName,tbl.name as TableName,cast(sp.partition_number as int) as partition_number , prv.value as boundary_value, lower(sty.name) as boundary_value_type 
                         from sys.tables st join sys.indexes si on st.object_id = si.object_id and si.index_id <2
                         join sys.partitions sp on sp.object_id = st.object_id 
                         and sp.index_id = si.index_id 
@@ -1266,36 +1406,36 @@ namespace DWScripter
 						JOIN sys.tables Tbl on si.object_id = Tbl.object_id
                         order by schema_name(tbl.schema_id),tbl.name,sp.partition_number";
 
-             rdr = cmd.ExecuteReader();
+            rdr = cmd.ExecuteReader();
 
-             while (rdr.Read())
-             {
+            while (rdr.Read())
+            {
                 SchemaName = rdr.GetString(rdr.GetOrdinal("SchemaName"));
                 TableName = rdr.GetString(rdr.GetOrdinal("TableName"));
                 TableKey = SchemaName + "." + TableName;
 
                 if (TableKey != tableKeyPrevious)
                 {
-                    if ( TableStruct.DBPartition.partitionColumn !="")
+                    if (TableStruct.DBPartition.partitionColumn != "")
                     {
                         TableStruct.DBPartition.partitionBoundaries.AddRange(partitionBoundaries);
                     }
                     TableStruct = this.dbstruct.GetTable(TableKey);
                     partitionBoundaries.Clear();
                     tableKeyPrevious = TableKey;
-
                 }
 
                 if (TableStruct != null)
                 {
-                    partitionBoundaries.Add(new PartitionBoundary(
-                                                 rdr.GetInt32(rdr.GetOrdinal("partition_number")),
-                                                 rdr.GetValue(rdr.GetOrdinal("boundary_value")).ToString(),
-                                                 rdr.GetString(rdr.GetOrdinal("boundary_value_type"))
-                                                 ));
+                    partitionBoundaries.Add(
+                        new PartitionBoundary(
+                            rdr.GetInt32(rdr.GetOrdinal("partition_number")),
+                            rdr.GetValue(rdr.GetOrdinal("boundary_value")).ToString(),
+                            rdr.GetString(rdr.GetOrdinal("boundary_value_type"))
+                        )
+                    );
                 }
-         
-             }
+            }
 
             if (TableKey != "" && TableStruct != null)
             {
@@ -1304,6 +1444,7 @@ namespace DWScripter
 
             rdr.Close();
         }
+
         private void getPartitioning(Boolean GetStructure, Boolean SourceFromFile)
         {
             partitionColumn = null;
@@ -1314,69 +1455,82 @@ namespace DWScripter
             if (!SourceFromFile)
             {
                 cmd.CommandText =
-                    "select c.name " +
-                    "from sys.tables t " +
-                    "join sys.indexes i on(i.object_id = t.object_id and i.index_id < 2) " +
-                    "join sys.index_columns  ic on(ic.partition_ordinal > 0 " +
-                    "and ic.index_id = i.index_id and ic.object_id = t.object_id) " +
-                    "join sys.columns c on(c.object_id = ic.object_id " +
-                     "and c.column_id = ic.column_id) " +
-                    "where t.object_id  = (select object_id from sys.tables where schema_name(schema_id) + '.' + name = '" + sourceTable + "')  ";
+                    "select c.name "
+                    + "from sys.tables t "
+                    + "join sys.indexes i on(i.object_id = t.object_id and i.index_id < 2) "
+                    + "join sys.index_columns  ic on(ic.partition_ordinal > 0 "
+                    + "and ic.index_id = i.index_id and ic.object_id = t.object_id) "
+                    + "join sys.columns c on(c.object_id = ic.object_id "
+                    + "and c.column_id = ic.column_id) "
+                    + "where t.object_id  = (select object_id from sys.tables where schema_name(schema_id) + '.' + name = '"
+                    + sourceTable
+                    + "')  ";
                 partitionColumn = (string)cmd.ExecuteScalar();
 
                 if (partitionColumn != null)
                 {
-
                     cmd.CommandText =
-                        "select pf.boundary_value_on_right from sys.partition_functions pf " +
-                        "join sys.partition_schemes ps on pf.function_id=ps.function_id " +
-                        "join sys.data_spaces ds on ps.data_space_id = ds.data_space_id " +
-                        "join sys.indexes si on si.data_space_id = ds.data_space_id " +
-                        "where si.object_id = (select object_id from sys.tables where schema_name(schema_id) + '.' + name = '" + sourceTable + "') ";
+                        "select pf.boundary_value_on_right from sys.partition_functions pf "
+                        + "join sys.partition_schemes ps on pf.function_id=ps.function_id "
+                        + "join sys.data_spaces ds on ps.data_space_id = ds.data_space_id "
+                        + "join sys.indexes si on si.data_space_id = ds.data_space_id "
+                        + "where si.object_id = (select object_id from sys.tables where schema_name(schema_id) + '.' + name = '"
+                        + sourceTable
+                        + "') ";
                     partitionLeftOrRight = ((bool)cmd.ExecuteScalar() ? "RIGHT" : "LEFT");
 
                     cmd.CommandText =
-                        "select  cast(sp.partition_number as int) as partition_number , prv.value as boundary_value, lower(sty.name) as boundary_value_type " +
-                        "from sys.tables st join sys.indexes si on st.object_id = si.object_id and si.index_id <2" +
-                        "join sys.partitions sp on sp.object_id = st.object_id " +
-                         "and sp.index_id = si.index_id " +
-                        "join sys.partition_schemes ps on ps.data_space_id = si.data_space_id " +
-                        "join sys.partition_range_values prv on prv.function_id = ps.function_id " +
-                        "join sys.partition_parameters pp on pp.function_id = ps.function_id " +
-                        "join sys.types sty on sty.user_type_id = pp.user_type_id " +
-                         "and prv.boundary_id = sp.partition_number " +
-                        "where st.object_id = (select object_id from sys.tables where schema_name(schema_id) + '.' + name = '" + sourceTable + "')  " +
-                        "order by sp.partition_number ";
+                        "select  cast(sp.partition_number as int) as partition_number , prv.value as boundary_value, lower(sty.name) as boundary_value_type "
+                        + "from sys.tables st join sys.indexes si on st.object_id = si.object_id and si.index_id <2"
+                        + "join sys.partitions sp on sp.object_id = st.object_id "
+                        + "and sp.index_id = si.index_id "
+                        + "join sys.partition_schemes ps on ps.data_space_id = si.data_space_id "
+                        + "join sys.partition_range_values prv on prv.function_id = ps.function_id "
+                        + "join sys.partition_parameters pp on pp.function_id = ps.function_id "
+                        + "join sys.types sty on sty.user_type_id = pp.user_type_id "
+                        + "and prv.boundary_id = sp.partition_number "
+                        + "where st.object_id = (select object_id from sys.tables where schema_name(schema_id) + '.' + name = '"
+                        + sourceTable
+                        + "')  "
+                        + "order by sp.partition_number ";
 
                     rdr = cmd.ExecuteReader();
 
-                    if (rdr.HasRows) 
+                    if (rdr.HasRows)
                     {
                         while (rdr.Read())
                         {
-                            partitionBoundaries.Add(new PartitionBoundary(
-                                rdr.GetInt32(rdr.GetOrdinal("partition_number")),
-                                rdr.GetValue(rdr.GetOrdinal("boundary_value")).ToString(),
-                                rdr.GetString(rdr.GetOrdinal("boundary_value_type"))
-                                ));
+                            partitionBoundaries.Add(
+                                new PartitionBoundary(
+                                    rdr.GetInt32(rdr.GetOrdinal("partition_number")),
+                                    rdr.GetValue(rdr.GetOrdinal("boundary_value")).ToString(),
+                                    rdr.GetString(rdr.GetOrdinal("boundary_value_type"))
+                                )
+                            );
                         }
                     }
 
                     rdr.Close();
                     if (GetStructure)
                     {
-                        dbstruct.GetTable(sourceTable).DBPartition.partitionColumn = partitionColumn;
-                        dbstruct.GetTable(sourceTable).DBPartition.partitionLeftOrRight = partitionLeftOrRight;
-                        dbstruct.GetTable(sourceTable).DBPartition.partitionBoundaries = partitionBoundaries;
-
+                        dbstruct.GetTable(sourceTable).DBPartition.partitionColumn =
+                            partitionColumn;
+                        dbstruct.GetTable(sourceTable).DBPartition.partitionLeftOrRight =
+                            partitionLeftOrRight;
+                        dbstruct.GetTable(sourceTable).DBPartition.partitionBoundaries =
+                            partitionBoundaries;
                     }
                 }
             }
             else
             {
-                partitionBoundaries = dbstruct.GetTable(sourceTable).DBPartition.partitionBoundaries;
+                partitionBoundaries = dbstruct
+                    .GetTable(sourceTable)
+                    .DBPartition.partitionBoundaries;
                 partitionColumn = dbstruct.GetTable(sourceTable).DBPartition.partitionColumn;
-                partitionLeftOrRight = dbstruct.GetTable(sourceTable).DBPartition.partitionLeftOrRight;
+                partitionLeftOrRight = dbstruct
+                    .GetTable(sourceTable)
+                    .DBPartition.partitionLeftOrRight;
             }
             foreach (PartitionBoundary b in partitionBoundaries)
             {
@@ -1393,7 +1547,6 @@ namespace DWScripter
 
             partitionBoundaryClause = partitionspec.ToString();
         }
-
 
         private void getDML(PDWscripter c, string outFile)
         {
@@ -1412,7 +1565,8 @@ namespace DWScripter
             Console.Write("DML>");
 
             // get generated statistics
-            String description = "-- script generated the : " + String.Format("{0:d/M/yyyy HH:mm:ss}", DateTime.Now);
+            String description =
+                "-- script generated the : " + String.Format("{0:d/M/yyyy HH:mm:ss}", DateTime.Now);
             cmd.CommandText = "select count(1) from sys.sql_modules";
             int objectcount = (int)cmd.ExecuteScalar();
             description += "\r\n-- objects scripted - objects = " + objectcount.ToString();
@@ -1420,38 +1574,54 @@ namespace DWScripter
             sw.WriteLine(description);
 
             // Adaptation to sort by dependency
-            cmd.CommandText = "select definition, object_name(object_id) from sys.sql_modules order by definition;";
+            cmd.CommandText =
+                "select definition, object_name(object_id) from sys.sql_modules order by definition;";
 
             rdr = cmd.ExecuteReader();
 
             String createUseDbTxt = "USE " + c.sourceDb + "\r\nGO\r\n";
             sw.WriteLine(createUseDbTxt);
 
-            List<KeyValuePair<String, String>> lstDbObjectDefinitions = new List<KeyValuePair<string, string>>();
+            List<KeyValuePair<String, String>> lstDbObjectDefinitions =
+                new List<KeyValuePair<string, string>>();
 
             while (rdr.Read())
             {
                 ModuleName = rdr.GetString(1);
-                if ((!String.IsNullOrWhiteSpace(this.SchemaFilter) & rinc.IsMatch(ModuleName)) & !rexc.IsMatch(ModuleName))
-                    {
-                        Console.WriteLine(String.Format("Module: {0}", ModuleName));
+                if (
+                    (!String.IsNullOrWhiteSpace(this.SchemaFilter) & rinc.IsMatch(ModuleName))
+                    & !rexc.IsMatch(ModuleName)
+                )
+                {
+                    Console.WriteLine(String.Format("Module: {0}", ModuleName));
 
                     IDataRecord record = (IDataRecord)rdr;
-                    KeyValuePair<String, String> kvpObjNameDef = new KeyValuePair<String, String>(String.Format("{0}", record[1]), String.Format("{0}", record[0]));
+                    KeyValuePair<String, String> kvpObjNameDef = new KeyValuePair<String, String>(
+                        String.Format("{0}", record[1]),
+                        String.Format("{0}", record[0])
+                    );
 
                     if (!lstDbObjectDefinitions.Exists(objDef => objDef.Key == kvpObjNameDef.Key))
                     {
                         // Object doesn't exist
-                        if (!lstDbObjectDefinitions.Any(objDef => objDef.Value.Contains(kvpObjNameDef.Key)))
+                        if (
+                            !lstDbObjectDefinitions.Any(
+                                objDef => objDef.Value.Contains(kvpObjNameDef.Key)
+                            )
+                        )
                         {
-                            // Object never used by an other object           
+                            // Object never used by an other object
                             lstDbObjectDefinitions.Add(kvpObjNameDef);
                         }
                         else
                         {
                             // Object already used by an other object, we had it previously to the calling one
-                            int idxCallingObj = lstDbObjectDefinitions.IndexOf(lstDbObjectDefinitions.First(objDef => objDef.Value.Contains(kvpObjNameDef.Key)));
-                               
+                            int idxCallingObj = lstDbObjectDefinitions.IndexOf(
+                                lstDbObjectDefinitions.First(
+                                    objDef => objDef.Value.Contains(kvpObjNameDef.Key)
+                                )
+                            );
+
                             lstDbObjectDefinitions.Insert(idxCallingObj, kvpObjNameDef);
                         }
                     }
@@ -1469,18 +1639,22 @@ namespace DWScripter
                     if (scriptMode == "Delta")
                     {
                         // Add object Drop
-                        string strObjectFullName = dbObjectDefinition.Value.Substring(12, dbObjectDefinition.Value.IndexOf(' ', 13) - 12);
-                        
+                        string strObjectFullName = dbObjectDefinition.Value.Substring(
+                            12,
+                            dbObjectDefinition.Value.IndexOf(' ', 13) - 12
+                        );
+
                         string strObjectType = dbObjectDefinition.Value.Substring(7, 4);
-                        
-                        string strDropObjectQuery = "DROP " + strObjectType + " " + strObjectFullName + ";";
+
+                        string strDropObjectQuery =
+                            "DROP " + strObjectType + " " + strObjectFullName + ";";
                         sw.WriteLine(strDropObjectQuery);
                         sw.WriteLine("");
                         if (index != nbObjectDefinitions - 1)
                         {
                             sw.WriteLine("GO");
                         }
-                        
+
                         sw.WriteLine("");
                         sw.WriteLine("");
                     }
@@ -1506,8 +1680,7 @@ namespace DWScripter
             Console.WriteLine("done");
         }
 
-
-        private string buildAlterTableForDistributionPolicyChangeText (TableSt SourceTbl)
+        private string buildAlterTableForDistributionPolicyChangeText(TableSt SourceTbl)
         {
             StringBuilder ScriptAtlterTableDistribution = new StringBuilder();
             string[] substringsTableName = SourceTbl.name.Split('.');
@@ -1515,27 +1688,43 @@ namespace DWScripter
             string sourcetablenameOnly = substringsTableName[1];
             string copyTmpTableNameOnly = substringsTableName[1] + "_tmp";
 
-            string copyTmpTableName = "[" + substringsTableName[0] + "].[" + copyTmpTableNameOnly + "]";
+            string copyTmpTableName =
+                "[" + substringsTableName[0] + "].[" + copyTmpTableNameOnly + "]";
 
-            copyDataToTmpTableTxt = "CREATE TABLE " + copyTmpTableName + "\r\n" +
-                    "WITH ( DISTRIBUTION = " + (SourceTbl.distribution_policy == 2 ? ("HASH ([" + SourceTbl.GetDistributionColumn() + "])") : (SourceTbl.distribution_policy == 3 ? "REPLICATE" : "ROUND_ROBIN")) +
-                    ")\r\n" +
-                    "AS SELECT * FROM [" + SourceTbl.name.Replace(".", "].[") + "]" +
-                    "\r\n;\r\n";
+            copyDataToTmpTableTxt =
+                "CREATE TABLE "
+                + copyTmpTableName
+                + "\r\n"
+                + "WITH ( DISTRIBUTION = "
+                + (
+                    SourceTbl.distribution_policy == 2
+                        ? ("HASH ([" + SourceTbl.GetDistributionColumn() + "])")
+                        : (SourceTbl.distribution_policy == 3 ? "REPLICATE" : "ROUND_ROBIN")
+                )
+                + ")\r\n"
+                + "AS SELECT * FROM ["
+                + SourceTbl.name.Replace(".", "].[")
+                + "]"
+                + "\r\n;\r\n";
             ScriptAtlterTableDistribution.Append(copyDataToTmpTableTxt);
-            
 
             // Drop Table
-            dropDeployTableTxt = "DROP TABLE [" + SourceTbl.name.Replace(".", "].[") + "]" +
-                    ";\r\n";
+            dropDeployTableTxt =
+                "DROP TABLE [" + SourceTbl.name.Replace(".", "].[") + "]" + ";\r\n";
             ScriptAtlterTableDistribution.Append(dropDeployTableTxt);
-            
 
             //Rename table
-            string RenameTable = "RENAME OBJECT::" + sourcetableSchemaOnly + "." + copyTmpTableNameOnly + " TO " + sourcetablenameOnly + ";\r\n";
+            string RenameTable =
+                "RENAME OBJECT::"
+                + sourcetableSchemaOnly
+                + "."
+                + copyTmpTableNameOnly
+                + " TO "
+                + sourcetablenameOnly
+                + ";\r\n";
 
             ScriptAtlterTableDistribution.Append(RenameTable);
-            
+
             return ScriptAtlterTableDistribution.ToString();
         }
 
@@ -1546,79 +1735,147 @@ namespace DWScripter
             string sourcetablenameOnly = substringsTableName[1];
             string copyTmpTableNameOnly = substringsTableName[1] + "_tmp";
 
-            string copyTmpTableName = "[" + substringsTableName[0] + "].[" + copyTmpTableNameOnly + "]";
+            string copyTmpTableName =
+                "[" + substringsTableName[0] + "].[" + copyTmpTableNameOnly + "]";
 
-            copyDataToTmpTableTxt = "CREATE TABLE " + copyTmpTableName + "\r\n" +
-                    "WITH ( DISTRIBUTION = " + (SourceTbl.distribution_policy == 2 ? ("HASH ([" + SourceTbl.GetDistributionColumn() + "])") : (SourceTbl.distribution_policy == 3 ? "REPLICATE" : "ROUND_ROBIN")) +
-                    ")\r\n" +
-                    "AS SELECT * FROM [" + SourceTbl.name.Replace(".", "].[") + "]" +
-                    "\r\n;\r\n";
+            copyDataToTmpTableTxt =
+                "CREATE TABLE "
+                + copyTmpTableName
+                + "\r\n"
+                + "WITH ( DISTRIBUTION = "
+                + (
+                    SourceTbl.distribution_policy == 2
+                        ? ("HASH ([" + SourceTbl.GetDistributionColumn() + "])")
+                        : (SourceTbl.distribution_policy == 3 ? "REPLICATE" : "ROUND_ROBIN")
+                )
+                + ")\r\n"
+                + "AS SELECT * FROM ["
+                + SourceTbl.name.Replace(".", "].[")
+                + "]"
+                + "\r\n;\r\n";
 
             sw.WriteLine(copyDataToTmpTableTxt);
 
             // Drop Table
-            dropDeployTableTxt = "DROP TABLE [" + SourceTbl.name.Replace(".", "].[") + "]" +
-                    ";\r\n";
+            dropDeployTableTxt =
+                "DROP TABLE [" + SourceTbl.name.Replace(".", "].[") + "]" + ";\r\n";
 
-           sw.WriteLine(dropDeployTableTxt);
+            sw.WriteLine(dropDeployTableTxt);
 
             //Rename table
-            string RenameTable = "RENAME OBJECT::" + sourcetableSchemaOnly + "." + copyTmpTableNameOnly + " TO " + sourcetablenameOnly + ";\r\n";
+            string RenameTable =
+                "RENAME OBJECT::"
+                + sourcetableSchemaOnly
+                + "."
+                + copyTmpTableNameOnly
+                + " TO "
+                + sourcetablenameOnly
+                + ";\r\n";
 
             sw.WriteLine(RenameTable);
         }
 
         private void buildCreateTableText(StreamWriter sw)
-        {    
+        {
             destTableFullName = destTable.Replace(".", "].[");
-            
-            sourceTmpTableName = "[" + destDb + "].[" + destTableFullName.Replace(destTableFullName.Substring(0, destTableFullName.IndexOf(']')), "DEP") + "]";
+
+            sourceTmpTableName =
+                "["
+                + destDb
+                + "].["
+                + destTableFullName.Replace(
+                    destTableFullName.Substring(0, destTableFullName.IndexOf(']')),
+                    "DEP"
+                )
+                + "]";
             if (scriptMode == "Delta")
             {
                 // Copy Data table to Temporary Table
-                copyDataToTmpTableTxt = "CREATE TABLE " + sourceTmpTableName + "\r\n" +
-                    "WITH ( DISTRIBUTION = " + (distribution_policy == 2 ? ("HASH ([" + distColumn + "])") : (distribution_policy == 3 ? "REPLICATE" : "ROUND_ROBIN")) +
-                    ")\r\n" +
-                    "AS SELECT * FROM [" + destDb + "].[" + destTable.Replace(".", "].[") + "]" +
-                    "\r\n;\r\n";
+                copyDataToTmpTableTxt =
+                    "CREATE TABLE "
+                    + sourceTmpTableName
+                    + "\r\n"
+                    + "WITH ( DISTRIBUTION = "
+                    + (
+                        distribution_policy == 2
+                            ? ("HASH ([" + distColumn + "])")
+                            : (distribution_policy == 3 ? "REPLICATE" : "ROUND_ROBIN")
+                    )
+                    + ")\r\n"
+                    + "AS SELECT * FROM ["
+                    + destDb
+                    + "].["
+                    + destTable.Replace(".", "].[")
+                    + "]"
+                    + "\r\n;\r\n";
 
                 sw.WriteLine(copyDataToTmpTableTxt);
 
                 // Drop Table
-                dropDeployTableTxt = "DROP TABLE [" + destDb + "].[" + destTable.Replace(".", "].[") + "]" +
-                    ";\r\n";
+                dropDeployTableTxt =
+                    "DROP TABLE [" + destDb + "].[" + destTable.Replace(".", "].[") + "]" + ";\r\n";
                 sw.WriteLine(dropDeployTableTxt);
             }
-            
-            createTableTxt = "CREATE TABLE [" + destTable.Replace(".", "].[") + "]\r\n(\r\n" +
-                columnClause + "\r\n)\r\n" +
-                "WITH ( DISTRIBUTION = " + (distribution_policy == 2 ? ("HASH ([" + distColumn + "])") : (distribution_policy == 3 ? "REPLICATE" : "ROUND_ROBIN")) +
-                
-                (clusteredClause != "" ? "\r\n, " + clusteredClause : "") +
-                (partitionBoundaryClause != "" ? ("\r\n, PARTITION ([" + partitionColumn + "] RANGE " + partitionLeftOrRight + " FOR VALUES \r\n(" +
-                partitionBoundaryClause + ")") : "") +
-                ");\r\n" + nonClusteredClause + statsClause;
+
+            createTableTxt =
+                "CREATE TABLE ["
+                + destTable.Replace(".", "].[")
+                + "]\r\n(\r\n"
+                + columnClause
+                + "\r\n)\r\n"
+                + "WITH ( DISTRIBUTION = "
+                + (
+                    distribution_policy == 2
+                        ? ("HASH ([" + distColumn + "])")
+                        : (distribution_policy == 3 ? "REPLICATE" : "ROUND_ROBIN")
+                )
+                + (clusteredClause != "" ? "\r\n, " + clusteredClause : "")
+                + (
+                    partitionBoundaryClause != ""
+                        ? (
+                            "\r\n, PARTITION (["
+                            + partitionColumn
+                            + "] RANGE "
+                            + partitionLeftOrRight
+                            + " FOR VALUES \r\n("
+                            + partitionBoundaryClause
+                            + ")"
+                        )
+                        : ""
+                )
+                + ");\r\n"
+                + nonClusteredClause
+                + statsClause;
             sw.WriteLine(createTableTxt);
 
             if (scriptMode == "Delta")
             {
                 // Copy data from Temporary Table
-                
-                columnSelect = "SET @COLUMNSNAME = NULL \r\n" +
-                    "select @COLUMNSNAME = COALESCE(@COLUMNSNAME,'') + c.name + ', ' " +
-                "from sys.columns c " +
-                "where c.object_id = (select object_id from sys.tables where schema_name(schema_id) + '.' + name = '" + destTable + "') \r\n";
+
+                columnSelect =
+                    "SET @COLUMNSNAME = NULL \r\n"
+                    + "select @COLUMNSNAME = COALESCE(@COLUMNSNAME,'') + c.name + ', ' "
+                    + "from sys.columns c "
+                    + "where c.object_id = (select object_id from sys.tables where schema_name(schema_id) + '.' + name = '"
+                    + destTable
+                    + "') \r\n";
                 sw.WriteLine(columnSelect);
 
-                copyDataFromTmpTableTxt = "INSERT INTO [" + destDb + "].[" + destTable.Replace(".", "].[") + "]\r\n(\r\n" +
-                    "@COLUMNSNAME)\r\n " +
-                    "FROM (SELECT @COLUMNSNAME FROM " + sourceTmpTableName + " \r\n " +
-                    ";\r\n";
+                copyDataFromTmpTableTxt =
+                    "INSERT INTO ["
+                    + destDb
+                    + "].["
+                    + destTable.Replace(".", "].[")
+                    + "]\r\n(\r\n"
+                    + "@COLUMNSNAME)\r\n "
+                    + "FROM (SELECT @COLUMNSNAME FROM "
+                    + sourceTmpTableName
+                    + " \r\n "
+                    + ";\r\n";
                 sw.WriteLine(copyDataFromTmpTableTxt);
 
                 // Drop Temporary Table
-                dropDeployTmpTableTxt = "DROP TABLE " + sourceTmpTableName + "\r\n" +
-                    ";\r\n";
+                dropDeployTmpTableTxt = "DROP TABLE " + sourceTmpTableName + "\r\n" + ";\r\n";
                 sw.WriteLine(dropDeployTmpTableTxt);
             }
 
@@ -1627,14 +1884,35 @@ namespace DWScripter
 
         private string buildScriptCreateTable()
         {
-            createTableTxt = "CREATE TABLE [" + destTable.Replace(".", "].[") + "]\r\n(\r\n" +
-            columnClause + "\r\n)\r\n" +
-            "WITH ( DISTRIBUTION = " + (distribution_policy == 2 ? ("HASH ([" + distColumn + "])") : (distribution_policy == 3 ? "REPLICATE" : "ROUND_ROBIN")) +
-            
-            (clusteredClause != "" ? "\r\n, " + clusteredClause : "") +
-            (partitionBoundaryClause != "" ? ("\r\n, PARTITION ([" + partitionColumn + "] RANGE " + partitionLeftOrRight + " FOR VALUES \r\n(" +
-            partitionBoundaryClause + ")") : "") +
-            ");\r\n" + nonClusteredClause + statsClause;
+            createTableTxt =
+                "CREATE TABLE ["
+                + destTable.Replace(".", "].[")
+                + "]\r\n(\r\n"
+                + columnClause
+                + "\r\n)\r\n"
+                + "WITH ( DISTRIBUTION = "
+                + (
+                    distribution_policy == 2
+                        ? ("HASH ([" + distColumn + "])")
+                        : (distribution_policy == 3 ? "REPLICATE" : "ROUND_ROBIN")
+                )
+                + (clusteredClause != "" ? "\r\n, " + clusteredClause : "")
+                + (
+                    partitionBoundaryClause != ""
+                        ? (
+                            "\r\n, PARTITION (["
+                            + partitionColumn
+                            + "] RANGE "
+                            + partitionLeftOrRight
+                            + " FOR VALUES \r\n("
+                            + partitionBoundaryClause
+                            + ")"
+                        )
+                        : ""
+                )
+                + ");\r\n"
+                + nonClusteredClause
+                + statsClause;
 
             return createTableTxt;
         }
@@ -1647,14 +1925,37 @@ namespace DWScripter
             strStartWarningMessage = "/* WARNING !!!! ======:  Possible Distribution changed .\r\n";
             strEndWarningMessage = "*/\r\n\r\n";
 
-            createTableTxt = "CREATE TABLE [" + dbTarget + "].[" + destTable.Replace(".", "].[") + "]\r\n(\r\n" +
-                columnClause + "\r\n)\r\n" +
-                "WITH ( DISTRIBUTION = " + (distribution_policy == 2 ? ("HASH ([" + distColumn + "])") : (distribution_policy == 3 ? "REPLICATE" : "ROUND_ROBIN")) +
-                
-                (clusteredClause != "" ? "\r\n, " + clusteredClause : "") +
-                (partitionBoundaryClause != "" ? ("\r\n, PARTITION ([" + partitionColumn + "] RANGE " + partitionLeftOrRight + " FOR VALUES \r\n(" +
-                partitionBoundaryClause + ")") : "") +
-                ");\r\n\r\n" + nonClusteredClause + statsClause;
+            createTableTxt =
+                "CREATE TABLE ["
+                + dbTarget
+                + "].["
+                + destTable.Replace(".", "].[")
+                + "]\r\n(\r\n"
+                + columnClause
+                + "\r\n)\r\n"
+                + "WITH ( DISTRIBUTION = "
+                + (
+                    distribution_policy == 2
+                        ? ("HASH ([" + distColumn + "])")
+                        : (distribution_policy == 3 ? "REPLICATE" : "ROUND_ROBIN")
+                )
+                + (clusteredClause != "" ? "\r\n, " + clusteredClause : "")
+                + (
+                    partitionBoundaryClause != ""
+                        ? (
+                            "\r\n, PARTITION (["
+                            + partitionColumn
+                            + "] RANGE "
+                            + partitionLeftOrRight
+                            + " FOR VALUES \r\n("
+                            + partitionBoundaryClause
+                            + ")"
+                        )
+                        : ""
+                )
+                + ");\r\n\r\n"
+                + nonClusteredClause
+                + statsClause;
 
             if (bWarn)
             {
@@ -1667,7 +1968,12 @@ namespace DWScripter
             Console.Write(".");
         }
 
-        public string  buildAlterTableScript(PDWscripter cSource, PDWscripter cTarget, TableDef t, Boolean SourceFromFile)
+        public string buildAlterTableScript(
+            PDWscripter cSource,
+            PDWscripter cTarget,
+            TableDef t,
+            Boolean SourceFromFile
+        )
         {
             StringBuilder columnspecAdd = new StringBuilder();
             StringBuilder columnspecAlter = new StringBuilder();
@@ -1682,11 +1988,10 @@ namespace DWScripter
             string strDopStats = string.Empty;
             string strDopStatsTXT = string.Empty;
             string strDistributionChangedTXT = string.Empty;
-      
+
             string strAlterScript;
             TableSt SourceTbl;
             TableSt TargetTbl;
-
 
             // Init
             cSource.sourceTable = t.name;
@@ -1703,24 +2008,40 @@ namespace DWScripter
             cTarget.getSourceColumns(false, SourceFromFile);
             targetdistColumn = cTarget.distColumn;
 
-            // If Distribution Changed, not the same object , so not Alter !!!  ==> TODO 
-            if (SourceTbl.distribution_policy != TargetTbl.distribution_policy || cTarget.distColumn != cSource.distColumn)
+            // If Distribution Changed, not the same object , so not Alter !!!  ==> TODO
+            if (
+                SourceTbl.distribution_policy != TargetTbl.distribution_policy
+                || cTarget.distColumn != cSource.distColumn
+            )
             {
-
                 if (SourceTbl.distribution_policy != TargetTbl.distribution_policy)
                 {
-                    string strWarningDistibutionTypeChange = "/*  Distribution type changed for table " + SourceTbl.name + " FROM " + TargetTbl.distribution_policy.ToString() + " to " + SourceTbl.distribution_policy + "  */\r\n";
+                    string strWarningDistibutionTypeChange =
+                        "/*  Distribution type changed for table "
+                        + SourceTbl.name
+                        + " FROM "
+                        + TargetTbl.distribution_policy.ToString()
+                        + " to "
+                        + SourceTbl.distribution_policy
+                        + "  */\r\n";
                     alterScript.Append(strWarningDistibutionTypeChange);
                 }
                 if (cTarget.distColumn != cSource.distColumn)
                 {
-                    string strWarningDistibutionTypeChange = "/*  Distribution Column changed for table " + SourceTbl.name + " From " + cTarget.distColumn + " to " + cSource.distColumn + "  */\r\n";
+                    string strWarningDistibutionTypeChange =
+                        "/*  Distribution Column changed for table "
+                        + SourceTbl.name
+                        + " From "
+                        + cTarget.distColumn
+                        + " to "
+                        + cSource.distColumn
+                        + "  */\r\n";
                     alterScript.Append(strWarningDistibutionTypeChange);
-
                 }
 
-                alterScript.Append(cSource.buildAlterTableForDistributionPolicyChangeText(SourceTbl));
-
+                alterScript.Append(
+                    cSource.buildAlterTableForDistributionPolicyChangeText(SourceTbl)
+                );
             }
 
             //Compare columns
@@ -1737,20 +2058,21 @@ namespace DWScripter
             {
                 isToAdd = true;
                 strStartWarningMessage = "";
-                
+
                 foreach (ColumnDef cTemp in cTarget.cols)
                 {
                     if (cTemp.name == c.name)
                     {
                         isToAdd = false;
                         isToAlter = (cTemp.columnDefinition != c.columnDefinition);
-                        isToAddDefaultContraint = (cTemp.defaultconstraint == "" && c.defaultconstraint != "");
+                        isToAddDefaultContraint = (
+                            cTemp.defaultconstraint == "" && c.defaultconstraint != ""
+                        );
 
                         break;
                     }
                 }
 
-                
                 if (isToAdd)
                 {
                     iCountAdd += 1;
@@ -1761,8 +2083,13 @@ namespace DWScripter
                     {
                         if (cTarget.stats.Exists(x => x.name == c.name))
                         {
-                            // Stats not clusturedIndex ==> DROP 
-                            strDopStats = "DROP STATISTICS  [" + destTable.Replace(".", "].[") + "].[" + c.name + "];\r\n";
+                            // Stats not clusturedIndex ==> DROP
+                            strDopStats =
+                                "DROP STATISTICS  ["
+                                + destTable.Replace(".", "].[")
+                                + "].["
+                                + c.name
+                                + "];\r\n";
                             columnspecDropStat.Append(strDopStats);
                         }
                     }
@@ -1770,8 +2097,17 @@ namespace DWScripter
                     {
                         if (isToAddDefaultContraint)
                         {
-                            alterTableTxt = "ALTER TABLE [" + cTarget.destDb + "].[" + destTable.Replace(".", "].[") + "]\r\n" +
-                             "ADD " + c.defaultconstraint + " FOR [" + c.name + "];\r\n";
+                            alterTableTxt =
+                                "ALTER TABLE ["
+                                + cTarget.destDb
+                                + "].["
+                                + destTable.Replace(".", "].[")
+                                + "]\r\n"
+                                + "ADD "
+                                + c.defaultconstraint
+                                + " FOR ["
+                                + c.name
+                                + "];\r\n";
 
                             columnsAlterDefaultCnstr.Append(alterTableTxt);
                             columnsAlterDefaultCnstr.Append("\r\n");
@@ -1783,7 +2119,6 @@ namespace DWScripter
                 {
                     // Changing a distribution column is not supported in Parallel Data Warehouse.
                     distColumn = c.name;
-      
                 }
 
                 if (isToAdd)
@@ -1800,27 +2135,40 @@ namespace DWScripter
                 }
                 else
                 {
-                    alterTableTxt = "ALTER TABLE [" + cTarget.destDb + "].[" + destTable.Replace(".", "].[") + "]\r\n" +
-                    "ALTER COLUMN " + c.columnDefinition + ";\r\n";
+                    alterTableTxt =
+                        "ALTER TABLE ["
+                        + cTarget.destDb
+                        + "].["
+                        + destTable.Replace(".", "].[")
+                        + "]\r\n"
+                        + "ALTER COLUMN "
+                        + c.columnDefinition
+                        + ";\r\n";
 
                     columnspecAlter.Append(alterTableTxt);
                     columnspecAlter.Append(strStartWarningMessage);
                     columnspecAlter.Append("\r\n");
                 }
-
             }
             // ====>>> SCRIPTS
-            // script : ADD 
+            // script : ADD
             if (columnspecAdd.Length > 0)
             {
-                strAlterScript = "ALTER TABLE [" + cTarget.destDb + "].[" + destTable.Replace(".", "].[") + "]\r\n" +
-                    "ADD " + columnspecAdd.ToString() + ";\r\n";
+                strAlterScript =
+                    "ALTER TABLE ["
+                    + cTarget.destDb
+                    + "].["
+                    + destTable.Replace(".", "].[")
+                    + "]\r\n"
+                    + "ADD "
+                    + columnspecAdd.ToString()
+                    + ";\r\n";
 
                 alterScript.Append(strAlterScript);
                 // sw.WriteLine(alterTableTxt);
             }
 
-            // script : DROP STATISTICS 
+            // script : DROP STATISTICS
             // Drop Statistics before Alter Table
             if (columnspecDropStat.Length > 0)
             {
@@ -1834,7 +2182,6 @@ namespace DWScripter
             if (columnspecAlter.Length > 0)
             {
                 alterScript.Append(columnspecAlter.ToString());
-
             }
             #endregion
 
@@ -1852,17 +2199,14 @@ namespace DWScripter
                 }
                 else
                 {
-
                     iCountDrop += 1;
                 }
-
 
                 if (c.distrbution_ordinal == 1)
                 {
                     // Cannot drop distribute Column
                     distColumn = c.name;
-
-                 }
+                }
 
                 if (iCountDrop > 1)
                 {
@@ -1873,24 +2217,32 @@ namespace DWScripter
                     columnspecDrop.Append("\t" + "[" + c.name + "]");
                 }
                 columnspecDrop.Append(strStartWarningMessage);
-
             }
-
 
             if (columnspecDrop.Length > 0)
             {
-
-                dropTableTxt = " ALTER TABLE [" + cTarget.destDb + "].[" + destTable.Replace(".", "].[") + "]\r\n" +
-                    "DROP COLUMN " + columnspecDrop.ToString() + ";  \r\n";
+                dropTableTxt =
+                    " ALTER TABLE ["
+                    + cTarget.destDb
+                    + "].["
+                    + destTable.Replace(".", "].[")
+                    + "]\r\n"
+                    + "DROP COLUMN "
+                    + columnspecDrop.ToString()
+                    + ";  \r\n";
 
                 alterScript.Append(dropTableTxt);
-                string description = "/* WARNING !!!! ======:  DROP COLUMN : " + columnspecDrop.ToString() + " ON TABLE : " + destTable + " \r\n";
+                string description =
+                    "/* WARNING !!!! ======:  DROP COLUMN : "
+                    + columnspecDrop.ToString()
+                    + " ON TABLE : "
+                    + destTable
+                    + " \r\n";
                 description += dropTableTxt;
-               
             }
             #endregion
 
-           
+
             //Compare clustered index
             if (SourceTbl.clusteredcols.CompareTo(TargetTbl.clusteredcols) == 1)
             {
@@ -1914,8 +2266,13 @@ namespace DWScripter
             return alterScript.ToString();
         }
 
-
-        private void buildAlterTableText(StreamWriter sw, PDWscripter cSource, PDWscripter cTarget, TableDef t, Boolean SourceFromFile)
+        private void buildAlterTableText(
+            StreamWriter sw,
+            PDWscripter cSource,
+            PDWscripter cTarget,
+            TableDef t,
+            Boolean SourceFromFile
+        )
         {
             StringBuilder columnspecAdd = new StringBuilder();
             StringBuilder columnspecAlter = new StringBuilder();
@@ -1935,7 +2292,6 @@ namespace DWScripter
             TableSt SourceTbl;
             TableSt TargetTbl;
 
-
             // Init
             cSource.sourceTable = t.name;
             cSource.destTable = t.name;
@@ -1951,20 +2307,22 @@ namespace DWScripter
             cTarget.getSourceColumns(false, SourceFromFile);
             targetdistColumn = cTarget.distColumn;
 
-            if (SourceTbl.distribution_policy != TargetTbl.distribution_policy || cTarget.distColumn != cSource.distColumn)
+            if (
+                SourceTbl.distribution_policy != TargetTbl.distribution_policy
+                || cTarget.distColumn != cSource.distColumn
+            )
             {
-
                 cSource.buildAlterTableForDistributionPolicyChange(sw, SourceTbl);
-                string strWarningDistibutionTypeChange = "/*  Distribution type or column change changed for table " + SourceTbl.name + "\r\n*/\r\n\r\n";
+                string strWarningDistibutionTypeChange =
+                    "/*  Distribution type or column change changed for table "
+                    + SourceTbl.name
+                    + "\r\n*/\r\n\r\n";
                 writeWarningtxt(strWarningDistibutionTypeChange);
-
             }
-
 
             //Compare columns
             var ListColumnsToCreateOrAlter = cSource.cols.Except(cTarget.cols).ToList();
             var ListolumnsToDelete = cTarget.cols.Except(cSource.cols).ToList();
-
 
             #region CompareColumnsTo ALTER
             int iCountAdd = 0;
@@ -1974,7 +2332,6 @@ namespace DWScripter
 
             // Init
             bIsWarning = false;
-
 
             foreach (ColumnDef c in ListColumnsToCreateOrAlter)
             {
@@ -1988,7 +2345,9 @@ namespace DWScripter
                     {
                         isToAdd = false;
                         isToAlter = (cTemp.columnDefinition != c.columnDefinition);
-                        isToAddDefaultContraint = (cTemp.defaultconstraint == "" && c.defaultconstraint != "");
+                        isToAddDefaultContraint = (
+                            cTemp.defaultconstraint == "" && c.defaultconstraint != ""
+                        );
 
                         break;
                     }
@@ -2005,8 +2364,13 @@ namespace DWScripter
                     {
                         if (cTarget.stats.Exists(x => x.name == c.name))
                         {
-                            // Stats not clusturedIndex ==> DROP 
-                            strDopStats = "DROP STATISTICS  [" + destTable.Replace(".", "].[") + "].[" + c.name + "];\r\n";
+                            // Stats not clusturedIndex ==> DROP
+                            strDopStats =
+                                "DROP STATISTICS  ["
+                                + destTable.Replace(".", "].[")
+                                + "].["
+                                + c.name
+                                + "];\r\n";
                             columnspecDropStat.Append(strDopStats);
                         }
                     }
@@ -2014,8 +2378,17 @@ namespace DWScripter
                     {
                         if (isToAddDefaultContraint)
                         {
-                            alterTableTxt = "ALTER TABLE [" + cTarget.destDb + "].[" + destTable.Replace(".", "].[") + "]\r\n" +
-                             "ADD " + c.defaultconstraint + " FOR [" + c.name + "];\r\n";
+                            alterTableTxt =
+                                "ALTER TABLE ["
+                                + cTarget.destDb
+                                + "].["
+                                + destTable.Replace(".", "].[")
+                                + "]\r\n"
+                                + "ADD "
+                                + c.defaultconstraint
+                                + " FOR ["
+                                + c.name
+                                + "];\r\n";
 
                             columnsAlterDefaultCnstr.Append(alterTableTxt);
                             columnsAlterDefaultCnstr.Append("\r\n");
@@ -2027,10 +2400,10 @@ namespace DWScripter
                 {
                     // Changing a distribution column is not supported in Parallel Data Warehouse.
                     distColumn = c.name;
-                    strStartWarningMessage = " -- WARNING !!!! ======: Changing a distribution column is not supported in Parallel Data Warehouse.\r\n";
+                    strStartWarningMessage =
+                        " -- WARNING !!!! ======: Changing a distribution column is not supported in Parallel Data Warehouse.\r\n";
                     bIsWarning = true;
                     writeWarningtxt(strStartWarningMessage + alterTableTxt);
-
                 }
 
                 if (isToAdd)
@@ -2047,27 +2420,40 @@ namespace DWScripter
                 }
                 else
                 {
-                    alterTableTxt = "ALTER TABLE [" + cTarget.destDb + "].[" + destTable.Replace(".", "].[") + "]\r\n" +
-                    "ALTER COLUMN " + c.columnDefinition + ";\r\n";
+                    alterTableTxt =
+                        "ALTER TABLE ["
+                        + cTarget.destDb
+                        + "].["
+                        + destTable.Replace(".", "].[")
+                        + "]\r\n"
+                        + "ALTER COLUMN "
+                        + c.columnDefinition
+                        + ";\r\n";
 
                     columnspecAlter.Append(alterTableTxt);
                     columnspecAlter.Append(strStartWarningMessage);
                     columnspecAlter.Append("\r\n");
                 }
-
             }
             // ====>>> SCRIPTS
-            // script : ADD 
+            // script : ADD
             if (columnspecAdd.Length > 0)
             {
-                strAlterScript = "ALTER TABLE [" + cTarget.destDb + "].[" + destTable.Replace(".", "].[") + "]\r\n" +
-                    "ADD " + columnspecAdd.ToString() + ";\r\n";
+                strAlterScript =
+                    "ALTER TABLE ["
+                    + cTarget.destDb
+                    + "].["
+                    + destTable.Replace(".", "].[")
+                    + "]\r\n"
+                    + "ADD "
+                    + columnspecAdd.ToString()
+                    + ";\r\n";
 
                 alterScript.Append(strAlterScript);
                 // sw.WriteLine(alterTableTxt);
             }
 
-            // script : DROP STATISTICS 
+            // script : DROP STATISTICS
             // Drop Statistics before Alter Table
             if (columnspecDropStat.Length > 0)
             {
@@ -2081,7 +2467,6 @@ namespace DWScripter
             if (columnspecAlter.Length > 0)
             {
                 alterScript.Append(columnspecAlter.ToString());
-
             }
             #endregion
 
@@ -2102,13 +2487,13 @@ namespace DWScripter
                     iCountDrop += 1;
                 }
 
-
                 if (c.distrbution_ordinal == 1)
                 {
                     // Cannot drop distribute Column
                     distColumn = c.name;
 
-                    strStartWarningMessage = "-- WARNING !!!! ======:  Cannot drop distribute Column.\r\n";
+                    strStartWarningMessage =
+                        "-- WARNING !!!! ======:  Cannot drop distribute Column.\r\n";
                     bIsWarning = true;
                 }
 
@@ -2123,14 +2508,25 @@ namespace DWScripter
                 columnspecDrop.Append(strStartWarningMessage);
             }
 
-
             if (columnspecDrop.Length > 0)
             {
-                dropTableTxt = "/* ALTER TABLE [" + cTarget.destDb + "].[" + destTable.Replace(".", "].[") + "]\r\n" +
-                    "DROP COLUMN " + columnspecDrop.ToString() + "; */ \r\n";
+                dropTableTxt =
+                    "/* ALTER TABLE ["
+                    + cTarget.destDb
+                    + "].["
+                    + destTable.Replace(".", "].[")
+                    + "]\r\n"
+                    + "DROP COLUMN "
+                    + columnspecDrop.ToString()
+                    + "; */ \r\n";
 
                 alterScript.Append(dropTableTxt);
-                string description = "/* WARNING !!!! ======:  DROP COLUMN : " + columnspecDrop.ToString() + " ON TABLE : " + destTable + " \r\n";
+                string description =
+                    "/* WARNING !!!! ======:  DROP COLUMN : "
+                    + columnspecDrop.ToString()
+                    + " ON TABLE : "
+                    + destTable
+                    + " \r\n";
                 description += dropTableTxt;
                 writeWarningtxt(description);
             }
@@ -2163,32 +2559,34 @@ namespace DWScripter
             //Console.Write(".");
             Console.Write(".");
         }
-        
+
         private string buildCreateStatisticsText(StatDef stat, string TargetTbl)
         {
             StringBuilder CreateStatsText = new StringBuilder();
-            CreateStatsText.Append("CREATE STATISTICS [" + stat.name + "] ON [" + TargetTbl.Replace(".", "].[") + "] ");
+            CreateStatsText.Append(
+                "CREATE STATISTICS [" + stat.name + "] ON [" + TargetTbl.Replace(".", "].[") + "] "
+            );
             foreach (StatColumnDef i in stat.cols)
+            {
+                if (i.key_ordinal > 1)
                 {
-                    if (i.key_ordinal > 1)
-                    {
-                        CreateStatsText.Append("\r\n,");
-                    }
-                    else
-                    {
-                        CreateStatsText.Append("\r\n(");
-                    }
-                    CreateStatsText.Append("[" + i.name + "] ");
+                    CreateStatsText.Append("\r\n,");
                 }
-                //managing filters
-                CreateStatsText.Append(")");
-                if (stat.IsFilteredStat())
+                else
                 {
-                    CreateStatsText.Append("\r\nWHERE "+stat.filter);
+                    CreateStatsText.Append("\r\n(");
                 }
-                CreateStatsText.Append("\r\n;\r\n");
+                CreateStatsText.Append("[" + i.name + "] ");
+            }
+            //managing filters
+            CreateStatsText.Append(")");
+            if (stat.IsFilteredStat())
+            {
+                CreateStatsText.Append("\r\nWHERE " + stat.filter);
+            }
+            CreateStatsText.Append("\r\n;\r\n");
 
-                return CreateStatsText.ToString();
+            return CreateStatsText.ToString();
         }
 
         private string buildAlterTableStatisticsText(TableSt SourceTbl, TableSt TargetTbl)
@@ -2202,13 +2600,21 @@ namespace DWScripter
                     // index name exists on target table
                     if (stat.CompareTo(targetstat) == 1)
                     {
-                        alterstatisticsscript.Append("DROP STATISTICS [" + stat.name + "] ON [" + TargetTbl.name.Replace(".", "].[") + "];\r\n");
-                        alterstatisticsscript.Append(buildCreateStatisticsText(stat,TargetTbl.name));
+                        alterstatisticsscript.Append(
+                            "DROP STATISTICS ["
+                                + stat.name
+                                + "] ON ["
+                                + TargetTbl.name.Replace(".", "].[")
+                                + "];\r\n"
+                        );
+                        alterstatisticsscript.Append(
+                            buildCreateStatisticsText(stat, TargetTbl.name)
+                        );
                     }
                 }
                 else
                 {
-                    alterstatisticsscript.Append(buildCreateStatisticsText(stat,TargetTbl.name));
+                    alterstatisticsscript.Append(buildCreateStatisticsText(stat, TargetTbl.name));
                 }
             }
 
@@ -2216,11 +2622,18 @@ namespace DWScripter
 
             foreach (var stattodalete in ListStatisticsToDelete)
             {
-                alterstatisticsscript.Append("DROP STATISTICS [" + TargetTbl.name.Replace(".", "].[") + "].[" + stattodalete.name + "];\r\n");
+                alterstatisticsscript.Append(
+                    "DROP STATISTICS ["
+                        + TargetTbl.name.Replace(".", "].[")
+                        + "].["
+                        + stattodalete.name
+                        + "];\r\n"
+                );
             }
 
             return alterstatisticsscript.ToString();
         }
+
         private string buildAlterTableClusteredIndexText(TableSt SourceTbl, TableSt TargetTbl)
         {
             StringBuilder alterclusteredindexscript = new StringBuilder();
@@ -2228,7 +2641,13 @@ namespace DWScripter
 
             if (TargetTbl.clusteredcols.Count != 0)
             {
-                alterclusteredindexscript.Append("DROP INDEX [" + TargetTbl.ClusteredIndexName + "] ON " + TargetTbl.name + ";\r\n");
+                alterclusteredindexscript.Append(
+                    "DROP INDEX ["
+                        + TargetTbl.ClusteredIndexName
+                        + "] ON "
+                        + TargetTbl.name
+                        + ";\r\n"
+                );
             }
             // create clustered index script create
             Boolean isCCI = false;
@@ -2239,10 +2658,22 @@ namespace DWScripter
                     isCCI = true;
                     foreach (NonclusteredIndexDef ncidx in TargetTbl.nonclusteredIndexes)
                     {
-                        alterclusteredindexscript.Append("DROP INDEX [" + ncidx.name + "] ON [" + TargetTbl.name.Replace(".", "].[") + "];\r\n");
+                        alterclusteredindexscript.Append(
+                            "DROP INDEX ["
+                                + ncidx.name
+                                + "] ON ["
+                                + TargetTbl.name.Replace(".", "].[")
+                                + "];\r\n"
+                        );
                     }
                     TargetTbl.nonclusteredIndexes.Clear();
-                    alterclusteredindexscript.Append("CREATE CLUSTERED COLUMNSTORE INDEX [" + SourceTbl.ClusteredIndexName + "] ON " + SourceTbl.name + ";\r\n");
+                    alterclusteredindexscript.Append(
+                        "CREATE CLUSTERED COLUMNSTORE INDEX ["
+                            + SourceTbl.ClusteredIndexName
+                            + "] ON "
+                            + SourceTbl.name
+                            + ";\r\n"
+                    );
                     break;
                 }
                 if (i.key_ordinal > 1)
@@ -2251,9 +2682,17 @@ namespace DWScripter
                 }
                 else
                 {
-                    alterclusteredindexscript.Append("CREATE CLUSTERED INDEX [" + SourceTbl.ClusteredIndexName + "] ON " + SourceTbl.name + "(");
+                    alterclusteredindexscript.Append(
+                        "CREATE CLUSTERED INDEX ["
+                            + SourceTbl.ClusteredIndexName
+                            + "] ON "
+                            + SourceTbl.name
+                            + "("
+                    );
                 }
-                alterclusteredindexscript.Append("[" + i.name + "]" + (i.is_descending_key ? " DESC " : ""));
+                alterclusteredindexscript.Append(
+                    "[" + i.name + "]" + (i.is_descending_key ? " DESC " : "")
+                );
             }
             if (alterclusteredindexscript.Length > 0 && !isCCI)
             {
@@ -2261,19 +2700,34 @@ namespace DWScripter
             }
             return alterclusteredindexscript.ToString();
         }
+
         private string buildAlterTableNonClusteredIndexText(TableSt SourceTbl, TableSt TargetTbl)
         {
             StringBuilder alternonclusteredindex = new StringBuilder();
             foreach (NonclusteredIndexDef ncidx in SourceTbl.nonclusteredIndexes)
             {
-                NonclusteredIndexDef targetncidx = TargetTbl.nonclusteredIndexes.GetIndex(ncidx.name);
+                NonclusteredIndexDef targetncidx = TargetTbl.nonclusteredIndexes.GetIndex(
+                    ncidx.name
+                );
                 if (targetncidx != null)
                 {
                     // index name exists on target table
                     if (ncidx.CompareTo(targetncidx) == 1)
                     {
-                        alternonclusteredindex.Append("DROP INDEX [" + ncidx.name + "] ON [" + TargetTbl.name.Replace(".", "].[") + "];\r\n");
-                        alternonclusteredindex.Append("CREATE INDEX [" + ncidx.name + "] ON [" + TargetTbl.name.Replace(".", "].[") + "] ");
+                        alternonclusteredindex.Append(
+                            "DROP INDEX ["
+                                + ncidx.name
+                                + "] ON ["
+                                + TargetTbl.name.Replace(".", "].[")
+                                + "];\r\n"
+                        );
+                        alternonclusteredindex.Append(
+                            "CREATE INDEX ["
+                                + ncidx.name
+                                + "] ON ["
+                                + TargetTbl.name.Replace(".", "].[")
+                                + "] "
+                        );
                         foreach (IndexColumnDef i in ncidx.cols)
                         {
                             if (i.key_ordinal > 1)
@@ -2284,14 +2738,22 @@ namespace DWScripter
                             {
                                 alternonclusteredindex.Append("\r\n(");
                             }
-                            alternonclusteredindex.Append("[" + i.name + "]" + (i.is_descending_key ? " DESC " : ""));
+                            alternonclusteredindex.Append(
+                                "[" + i.name + "]" + (i.is_descending_key ? " DESC " : "")
+                            );
                         }
                         alternonclusteredindex.Append(");\r\n");
                     }
                 }
                 else
                 {
-                    alternonclusteredindex.Append("CREATE INDEX [" + ncidx.name + "] ON [" + TargetTbl.name.Replace(".", "].[") + "] ");
+                    alternonclusteredindex.Append(
+                        "CREATE INDEX ["
+                            + ncidx.name
+                            + "] ON ["
+                            + TargetTbl.name.Replace(".", "].[")
+                            + "] "
+                    );
                     foreach (IndexColumnDef i in ncidx.cols)
                     {
                         if (i.key_ordinal > 1)
@@ -2302,23 +2764,32 @@ namespace DWScripter
                         {
                             alternonclusteredindex.Append("\r\n(");
                         }
-                        alternonclusteredindex.Append("[" + i.name + "]" + (i.is_descending_key ? " DESC " : ""));
+                        alternonclusteredindex.Append(
+                            "[" + i.name + "]" + (i.is_descending_key ? " DESC " : "")
+                        );
                     }
                     alternonclusteredindex.Append(");\r\n");
                 }
-
             }
 
-            var ListNonClusteredIndexToDelete = TargetTbl.nonclusteredIndexes.Except(SourceTbl.nonclusteredIndexes).ToList();
+            var ListNonClusteredIndexToDelete = TargetTbl.nonclusteredIndexes
+                .Except(SourceTbl.nonclusteredIndexes)
+                .ToList();
 
             foreach (var idxtodalete in ListNonClusteredIndexToDelete)
             {
-                alternonclusteredindex.Append("DROP INDEX [" + TargetTbl.name.Replace(".", "].[") + "].[" + idxtodalete.name + "];\r\n");
+                alternonclusteredindex.Append(
+                    "DROP INDEX ["
+                        + TargetTbl.name.Replace(".", "].[")
+                        + "].["
+                        + idxtodalete.name
+                        + "];\r\n"
+                );
             }
 
             return alternonclusteredindex.ToString();
-
         }
+
         private void compBuildDropTableText(StreamWriter sw, bool bWarn)
         {
             String strStartWarningMessage = string.Empty;
@@ -2329,7 +2800,8 @@ namespace DWScripter
 
             destTableFullName = destTable.Replace(".", "].[");
 
-            dropTableTxt = "/* DROP TABLE [" + destDb + "].[" + destTable.Replace(".", "].[") + "] */\r\n";
+            dropTableTxt =
+                "/* DROP TABLE [" + destDb + "].[" + destTable.Replace(".", "].[") + "] */\r\n";
 
             if (bWarn)
             {
@@ -2343,13 +2815,20 @@ namespace DWScripter
             Console.Write(".");
         }
 
-      private void compareDML(PDWscripter cSource, PDWscripter cTarget, string outFile, Boolean SourceFromFile, FilterSettings FilterSet)
+        private void compareDML(
+            PDWscripter cSource,
+            PDWscripter cTarget,
+            string outFile,
+            Boolean SourceFromFile,
+            FilterSettings FilterSet
+        )
         {
             StreamWriter outfile = null;
             FileStream fs = null;
             Console.Write("CompareDML>");
 
-            cTarget.cmd.CommandText = @" SELECT c.definition, b.name + '.' + a.name AS ObjectName
+            cTarget.cmd.CommandText =
+                @" SELECT c.definition, b.name + '.' + a.name AS ObjectName
                     FROM
                     sys.sql_modules c
                     INNER JOIN sys.objects a ON a.object_id = c.object_id
@@ -2361,14 +2840,19 @@ namespace DWScripter
                 fs = new FileStream(outFile, FileMode.Create);
                 outfile = new StreamWriter(fs);
             }
-            String description = "-- script generated the : " + String.Format("{0:d/M/yyyy HH:mm:ss}", DateTime.Now) + "\r\n";
+            String description =
+                "-- script generated the : "
+                + String.Format("{0:d/M/yyyy HH:mm:ss}", DateTime.Now)
+                + "\r\n";
             outfile.WriteLine(description);
 
             String createUseDbTxt = "USE " + cTarget.sourceDb + "\r\nGO\r\n";
             outfile.WriteLine(createUseDbTxt);
 
-            List<KeyValuePair<String, String>> lstSourceDbObjectDefinitions = new List<KeyValuePair<string, string>>();
-            List<KeyValuePair<String, String>> lstTargetDbObjectDefinitions = new List<KeyValuePair<string, string>>();
+            List<KeyValuePair<String, String>> lstSourceDbObjectDefinitions =
+                new List<KeyValuePair<string, string>>();
+            List<KeyValuePair<String, String>> lstTargetDbObjectDefinitions =
+                new List<KeyValuePair<string, string>>();
 
             List<KeyValuePair<String, String>> lstCreateOrAlterDbObjectDefinitions;
             List<KeyValuePair<String, String>> lstDropDbObjectDefinitions;
@@ -2376,7 +2860,8 @@ namespace DWScripter
             if (!SourceFromFile)
             {
                 // ===>>>< source
-                cSource.cmd.CommandText = @" SELECT c.definition, b.name + '.' + a.name AS ObjectName
+                cSource.cmd.CommandText =
+                    @" SELECT c.definition, b.name + '.' + a.name AS ObjectName
                     FROM
                     sys.sql_modules c
                     INNER JOIN sys.objects a ON a.object_id = c.object_id
@@ -2387,12 +2872,26 @@ namespace DWScripter
                 while (rdr.Read())
                 {
                     IDataRecord record = (IDataRecord)rdr;
-                    KeyValuePair<String, String> sourceKvpObjNameDef = new KeyValuePair<String, String>(String.Format("{0}", record[1]), String.Format("{0}", record[0]).TrimEnd(new char[] { '\r', '\n', ' ' }));
+                    KeyValuePair<String, String> sourceKvpObjNameDef = new KeyValuePair<
+                        String,
+                        String
+                    >(
+                        String.Format("{0}", record[1]),
+                        String.Format("{0}", record[0]).TrimEnd(new char[] { '\r', '\n', ' ' })
+                    );
 
-                    if (!lstSourceDbObjectDefinitions.Exists(objDef => objDef.Key == sourceKvpObjNameDef.Key))
+                    if (
+                        !lstSourceDbObjectDefinitions.Exists(
+                            objDef => objDef.Key == sourceKvpObjNameDef.Key
+                        )
+                    )
                     {
                         // Object doesn't exist
-                        if (!lstSourceDbObjectDefinitions.Any(objDef => objDef.Value.Contains(sourceKvpObjNameDef.Key)))
+                        if (
+                            !lstSourceDbObjectDefinitions.Any(
+                                objDef => objDef.Value.Contains(sourceKvpObjNameDef.Key)
+                            )
+                        )
                         {
                             // Object never used by an other object
                             lstSourceDbObjectDefinitions.Add(sourceKvpObjNameDef);
@@ -2400,7 +2899,11 @@ namespace DWScripter
                         else
                         {
                             // Object already used by an other object, we had it previously to the calling one
-                            int idxCallingObj = lstSourceDbObjectDefinitions.IndexOf(lstSourceDbObjectDefinitions.First(objDef => objDef.Value.Contains(sourceKvpObjNameDef.Key)));
+                            int idxCallingObj = lstSourceDbObjectDefinitions.IndexOf(
+                                lstSourceDbObjectDefinitions.First(
+                                    objDef => objDef.Value.Contains(sourceKvpObjNameDef.Key)
+                                )
+                            );
                             lstSourceDbObjectDefinitions.Insert(idxCallingObj, sourceKvpObjNameDef);
                         }
                     }
@@ -2415,12 +2918,23 @@ namespace DWScripter
             while (rdr.Read())
             {
                 IDataRecord record = (IDataRecord)rdr;
-                KeyValuePair<String, String> targetKvpObjNameDef = new KeyValuePair<String, String>(String.Format("{0}", record[1]), String.Format("{0}", record[0]).TrimEnd(new char[] { '\r', '\n', ' ' }));
+                KeyValuePair<String, String> targetKvpObjNameDef = new KeyValuePair<String, String>(
+                    String.Format("{0}", record[1]),
+                    String.Format("{0}", record[0]).TrimEnd(new char[] { '\r', '\n', ' ' })
+                );
 
-                if (!lstTargetDbObjectDefinitions.Exists(objDef => objDef.Key == targetKvpObjNameDef.Key))
+                if (
+                    !lstTargetDbObjectDefinitions.Exists(
+                        objDef => objDef.Key == targetKvpObjNameDef.Key
+                    )
+                )
                 {
                     // Object doesn't exist
-                    if (!lstTargetDbObjectDefinitions.Any(objDef => objDef.Value.Contains(targetKvpObjNameDef.Key)))
+                    if (
+                        !lstTargetDbObjectDefinitions.Any(
+                            objDef => objDef.Value.Contains(targetKvpObjNameDef.Key)
+                        )
+                    )
                     {
                         // Object never used by an other object
                         lstTargetDbObjectDefinitions.Add(targetKvpObjNameDef);
@@ -2428,7 +2942,11 @@ namespace DWScripter
                     else
                     {
                         // Object already used by an other object, we had it previously to the calling one
-                        int idxCallingObj = lstTargetDbObjectDefinitions.IndexOf(lstTargetDbObjectDefinitions.First(objDef => objDef.Value.Contains(targetKvpObjNameDef.Key)));
+                        int idxCallingObj = lstTargetDbObjectDefinitions.IndexOf(
+                            lstTargetDbObjectDefinitions.First(
+                                objDef => objDef.Value.Contains(targetKvpObjNameDef.Key)
+                            )
+                        );
                         lstTargetDbObjectDefinitions.Insert(idxCallingObj, targetKvpObjNameDef);
                     }
                 }
@@ -2446,32 +2964,77 @@ namespace DWScripter
             {
                 case "SCHEMA":
                     // split to retrieve the schema name moduledef.Key.Split((char)'.')[0] -- schema.name
-                    lstSourceDbObjectDefinitionsSource = lstSourceDbObjectDefinitions.FindAll(delegate (KeyValuePair<string, string> moduledef) { return FilterSet.GetSchemas().Contains(moduledef.Key.Split((char)'.')[0]); });
-                    lstSourceDbObjectDefinitionsTarget = lstTargetDbObjectDefinitions.FindAll(delegate (KeyValuePair<string, string> moduledef) { return FilterSet.GetSchemas().Contains(moduledef.Key.Split((char)'.')[0]); });
+                    lstSourceDbObjectDefinitionsSource = lstSourceDbObjectDefinitions.FindAll(
+                        delegate(KeyValuePair<string, string> moduledef)
+                        {
+                            return FilterSet
+                                .GetSchemas()
+                                .Contains(moduledef.Key.Split((char)'.')[0]);
+                        }
+                    );
+                    lstSourceDbObjectDefinitionsTarget = lstTargetDbObjectDefinitions.FindAll(
+                        delegate(KeyValuePair<string, string> moduledef)
+                        {
+                            return FilterSet
+                                .GetSchemas()
+                                .Contains(moduledef.Key.Split((char)'.')[0]);
+                        }
+                    );
 
-                    lstCreateOrAlterDbObjectDefinitions = lstSourceDbObjectDefinitionsSource.Except(lstSourceDbObjectDefinitionsTarget).ToList();
-                    lstDropDbObjectDefinitions = lstSourceDbObjectDefinitionsTarget.Except(lstSourceDbObjectDefinitionsSource).ToList();
-               
+                    lstCreateOrAlterDbObjectDefinitions = lstSourceDbObjectDefinitionsSource
+                        .Except(lstSourceDbObjectDefinitionsTarget)
+                        .ToList();
+                    lstDropDbObjectDefinitions = lstSourceDbObjectDefinitionsTarget
+                        .Except(lstSourceDbObjectDefinitionsSource)
+                        .ToList();
+
                     break;
                 case "OBJECTS":
-                    lstSourceDbObjectDefinitionsSource = lstSourceDbObjectDefinitions.FindAll(delegate (KeyValuePair<string, string> moduledef) { return FilterSet.GetSchemaNameObjects().Contains(moduledef.Key); });
-                    lstSourceDbObjectDefinitionsTarget = lstTargetDbObjectDefinitions.FindAll(delegate (KeyValuePair<string, string> moduledef) { return FilterSet.GetSchemaNameObjects().Contains(moduledef.Key); });
+                    lstSourceDbObjectDefinitionsSource = lstSourceDbObjectDefinitions.FindAll(
+                        delegate(KeyValuePair<string, string> moduledef)
+                        {
+                            return FilterSet.GetSchemaNameObjects().Contains(moduledef.Key);
+                        }
+                    );
+                    lstSourceDbObjectDefinitionsTarget = lstTargetDbObjectDefinitions.FindAll(
+                        delegate(KeyValuePair<string, string> moduledef)
+                        {
+                            return FilterSet.GetSchemaNameObjects().Contains(moduledef.Key);
+                        }
+                    );
 
-                    lstCreateOrAlterDbObjectDefinitions = lstSourceDbObjectDefinitionsSource.Except(lstSourceDbObjectDefinitionsTarget).ToList();
-               
+                    lstCreateOrAlterDbObjectDefinitions = lstSourceDbObjectDefinitionsSource
+                        .Except(lstSourceDbObjectDefinitionsTarget)
+                        .ToList();
+
                     break;
 
                 default:
-                    lstCreateOrAlterDbObjectDefinitions = lstSourceDbObjectDefinitions.Except(lstTargetDbObjectDefinitions).ToList();
-                    lstDropDbObjectDefinitions = lstTargetDbObjectDefinitions.Except(lstSourceDbObjectDefinitions).ToList();
-                    toDelete = lstCreateOrAlterDbObjectDefinitions.Except(lstDropDbObjectDefinitions).ToList().Count();
+                    lstCreateOrAlterDbObjectDefinitions = lstSourceDbObjectDefinitions
+                        .Except(lstTargetDbObjectDefinitions)
+                        .ToList();
+                    lstDropDbObjectDefinitions = lstTargetDbObjectDefinitions
+                        .Except(lstSourceDbObjectDefinitions)
+                        .ToList();
+                    toDelete = lstCreateOrAlterDbObjectDefinitions
+                        .Except(lstDropDbObjectDefinitions)
+                        .ToList()
+                        .Count();
 
                     break;
             }
 
-
-            description = "\r\n-- objects scripted - ALTERorCREATE = " + lstCreateOrAlterDbObjectDefinitions.Count().ToString() + " - DROP = " + toDelete.ToString();
-            Console.Write("\r\n objects scripted - ALTERorCREATE = " + lstCreateOrAlterDbObjectDefinitions.Count().ToString() + " - DROP = " + toDelete.ToString());
+            description =
+                "\r\n-- objects scripted - ALTERorCREATE = "
+                + lstCreateOrAlterDbObjectDefinitions.Count().ToString()
+                + " - DROP = "
+                + toDelete.ToString();
+            Console.Write(
+                "\r\n objects scripted - ALTERorCREATE = "
+                    + lstCreateOrAlterDbObjectDefinitions.Count().ToString()
+                    + " - DROP = "
+                    + toDelete.ToString()
+            );
             outfile.WriteLine(description);
             //==> EnumReferencedObjects ToolBar create OrderedParallelQuery ALTER
             int nbObjectDefinitions = lstCreateOrAlterDbObjectDefinitions.Count();
@@ -2480,53 +3043,109 @@ namespace DWScripter
 
             if (nbObjectDefinitions > 0)
             {
-                outfile.WriteLine("/*  =========== DROP AND/OR CREATE ###==> Begin =================*/\r\n");
+                outfile.WriteLine(
+                    "/*  =========== DROP AND/OR CREATE ###==> Begin =================*/\r\n"
+                );
             }
 
             // we order the create script based on dependencies
-            List<KeyValuePair<string, string>> lstCreateOrAlterDbObjectDefinitionsSanitizedOrdered = new List<KeyValuePair<string, string>>();
+            List<
+                KeyValuePair<string, string>
+            > lstCreateOrAlterDbObjectDefinitionsSanitizedOrdered =
+                new List<KeyValuePair<string, string>>();
 
-            List<KeyValuePair<string, string>> lstCreateOrAlterDbObjectDefinitionsSanitized = new List<KeyValuePair<string, string>>();
-            foreach (KeyValuePair<String, String> CreateOrAlterDbObjectDefinition in lstCreateOrAlterDbObjectDefinitions)
+            List<KeyValuePair<string, string>> lstCreateOrAlterDbObjectDefinitionsSanitized =
+                new List<KeyValuePair<string, string>>();
+            foreach (
+                KeyValuePair<
+                    String,
+                    String
+                > CreateOrAlterDbObjectDefinition in lstCreateOrAlterDbObjectDefinitions
+            )
             {
-                KeyValuePair<String, String> CreateOrAlterDbObjectDefinitionSanitized = new KeyValuePair<String, String>(CreateOrAlterDbObjectDefinition.Key, CreateOrAlterDbObjectDefinition.Value.Replace("[", "").Replace("]", ""));
+                KeyValuePair<String, String> CreateOrAlterDbObjectDefinitionSanitized =
+                    new KeyValuePair<String, String>(
+                        CreateOrAlterDbObjectDefinition.Key,
+                        CreateOrAlterDbObjectDefinition.Value.Replace("[", "").Replace("]", "")
+                    );
 
-                lstCreateOrAlterDbObjectDefinitionsSanitized.Add(CreateOrAlterDbObjectDefinitionSanitized);
+                lstCreateOrAlterDbObjectDefinitionsSanitized.Add(
+                    CreateOrAlterDbObjectDefinitionSanitized
+                );
             }
 
-
-            foreach (KeyValuePair<String, String> CreateOrAlterDbObjectDefinition in lstCreateOrAlterDbObjectDefinitionsSanitized)
+            foreach (
+                KeyValuePair<
+                    String,
+                    String
+                > CreateOrAlterDbObjectDefinition in lstCreateOrAlterDbObjectDefinitionsSanitized
+            )
             {
-                if (!lstCreateOrAlterDbObjectDefinitionsSanitizedOrdered.Exists(objDef => objDef.Key == CreateOrAlterDbObjectDefinition.Key))
+                if (
+                    !lstCreateOrAlterDbObjectDefinitionsSanitizedOrdered.Exists(
+                        objDef => objDef.Key == CreateOrAlterDbObjectDefinition.Key
+                    )
+                )
                 {
                     // Object doesn't exist
-                    if (!lstCreateOrAlterDbObjectDefinitionsSanitizedOrdered.Any(objDef => objDef.Value.Contains(CreateOrAlterDbObjectDefinition.Key)))
+                    if (
+                        !lstCreateOrAlterDbObjectDefinitionsSanitizedOrdered.Any(
+                            objDef => objDef.Value.Contains(CreateOrAlterDbObjectDefinition.Key)
+                        )
+                    )
                     {
                         // Object never used by an other object
-                        lstCreateOrAlterDbObjectDefinitionsSanitizedOrdered.Add(CreateOrAlterDbObjectDefinition);
+                        lstCreateOrAlterDbObjectDefinitionsSanitizedOrdered.Add(
+                            CreateOrAlterDbObjectDefinition
+                        );
                     }
                     else
                     {
                         // Object already used by an other object, we had it previously to the calling one
-                        int idxCallingObj = lstCreateOrAlterDbObjectDefinitionsSanitizedOrdered.IndexOf(lstCreateOrAlterDbObjectDefinitionsSanitizedOrdered.First(objDef => objDef.Value.Contains(CreateOrAlterDbObjectDefinition.Key)));
-                        lstCreateOrAlterDbObjectDefinitionsSanitizedOrdered.Insert(idxCallingObj, CreateOrAlterDbObjectDefinition);
+                        int idxCallingObj =
+                            lstCreateOrAlterDbObjectDefinitionsSanitizedOrdered.IndexOf(
+                                lstCreateOrAlterDbObjectDefinitionsSanitizedOrdered.First(
+                                    objDef =>
+                                        objDef.Value.Contains(CreateOrAlterDbObjectDefinition.Key)
+                                )
+                            );
+                        lstCreateOrAlterDbObjectDefinitionsSanitizedOrdered.Insert(
+                            idxCallingObj,
+                            CreateOrAlterDbObjectDefinition
+                        );
                     }
                 }
             }
 
-            foreach (KeyValuePair<String, String> CreateOrAlterDbObjectDefinitionsSanitized in lstCreateOrAlterDbObjectDefinitionsSanitizedOrdered)
+            foreach (
+                KeyValuePair<
+                    String,
+                    String
+                > CreateOrAlterDbObjectDefinitionsSanitized in lstCreateOrAlterDbObjectDefinitionsSanitizedOrdered
+            )
             {
                 // we retrieve the original value
-                KeyValuePair<String, String> dbObjectDefinition = lstCreateOrAlterDbObjectDefinitions.Find(objdef => objdef.Key == CreateOrAlterDbObjectDefinitionsSanitized.Key);
+                KeyValuePair<String, String> dbObjectDefinition =
+                    lstCreateOrAlterDbObjectDefinitions.Find(
+                        objdef => objdef.Key == CreateOrAlterDbObjectDefinitionsSanitized.Key
+                    );
 
-                if (lstTargetDbObjectDefinitions.Exists(objDef => objDef.Key == dbObjectDefinition.Key))
+                if (
+                    lstTargetDbObjectDefinitions.Exists(
+                        objDef => objDef.Key == dbObjectDefinition.Key
+                    )
+                )
                 {
                     index++;
 
                     // Add object Drop
-                    string strObjectFullName = dbObjectDefinition.Value.Substring(12, dbObjectDefinition.Value.IndexOf(' ', 13) - 12);
+                    string strObjectFullName = dbObjectDefinition.Value.Substring(
+                        12,
+                        dbObjectDefinition.Value.IndexOf(' ', 13) - 12
+                    );
                     string strObjectType = dbObjectDefinition.Value.Substring(7, 4);
-                    string strDropObjectQuery = "DROP " + strObjectType + " " + strObjectFullName + ";";
+                    string strDropObjectQuery =
+                        "DROP " + strObjectType + " " + strObjectFullName + ";";
                     if (index != 1)
                     {
                         strDropObjectQuery = "GO\r\n" + strDropObjectQuery;
@@ -2550,34 +3169,45 @@ namespace DWScripter
 
             if (nbObjectDefinitions > 0)
             {
-                outfile.WriteLine("/*  =========== DROP AND/OR CREATE ###==> End ===================*/");
+                outfile.WriteLine(
+                    "/*  =========== DROP AND/OR CREATE ###==> End ===================*/"
+                );
                 outfile.WriteLine("PRINT 'DROP AND/OR CREATE End'\r\n");
             }
 
-            // Drop 
+            // Drop
             nbObjectDefinitions = lstDropDbObjectDefinitions.Count();
 
             if (nbObjectDefinitions > 0)
             {
-                outfile.WriteLine("/*  ===========        DROP     ###==> Begin =================*/");
+                outfile.WriteLine(
+                    "/*  ===========        DROP     ###==> Begin =================*/"
+                );
                 outfile.WriteLine("PRINT 'DROP Begin'\r\n");
             }
 
             prevDbObjectDefinition = String.Empty;
             foreach (KeyValuePair<String, String> dbObjectDefinition in lstDropDbObjectDefinitions)
             {
-
-                if (!lstSourceDbObjectDefinitions.Exists(objDef => objDef.Key == dbObjectDefinition.Key))
+                if (
+                    !lstSourceDbObjectDefinitions.Exists(
+                        objDef => objDef.Key == dbObjectDefinition.Key
+                    )
+                )
                 {
                     index++;
                     // Add object Drop
-                    string strObjectFullName = dbObjectDefinition.Value.Substring(12, dbObjectDefinition.Value.IndexOf(' ', 13) - 12);
+                    string strObjectFullName = dbObjectDefinition.Value.Substring(
+                        12,
+                        dbObjectDefinition.Value.IndexOf(' ', 13) - 12
+                    );
                     string strObjectType = dbObjectDefinition.Value.Substring(7, 4);
                     if (index != 1)
                     {
                         outfile.WriteLine("GO");
                     }
-                    string strDropObjectQuery = "DROP " + strObjectType + " " + strObjectFullName + ";";
+                    string strDropObjectQuery =
+                        "DROP " + strObjectType + " " + strObjectFullName + ";";
                     outfile.WriteLine(strDropObjectQuery);
                     outfile.WriteLine("");
                 }
@@ -2585,7 +3215,9 @@ namespace DWScripter
 
             if (nbObjectDefinitions > 0)
             {
-                outfile.WriteLine("/*  ===========        DROP     ###==> End ===============*/\r\n");
+                outfile.WriteLine(
+                    "/*  ===========        DROP     ###==> End ===============*/\r\n"
+                );
             }
             outfile.WriteLine("PRINT 'END'");
             if (outFile != "")
@@ -2608,19 +3240,30 @@ namespace DWScripter
             }
 
             // get generated statistics
-            String description = "-- script generated the : " + String.Format("{0:d/M/yyyy HH:mm:ss}", DateTime.Now);
+            String description =
+                "-- script generated the : " + String.Format("{0:d/M/yyyy HH:mm:ss}", DateTime.Now);
 
             //get objects count
-            cmd.CommandText = "select count(1) from sys.schemas where name not in ('dbo','sys','INFORMATION_SCHEMA')";
+            cmd.CommandText =
+                "select count(1) from sys.schemas where name not in ('dbo','sys','INFORMATION_SCHEMA')";
             int schemacount = (int)cmd.ExecuteScalar();
 
-            description += "\r\n-- objects scripted - tables = " + c.dbTables.Count.ToString() + " - schemas = " + schemacount.ToString();
+            description +=
+                "\r\n-- objects scripted - tables = "
+                + c.dbTables.Count.ToString()
+                + " - schemas = "
+                + schemacount.ToString();
             sw.WriteLine(description);
 
             String createUseDbTxt = "USE " + c.sourceDb + "\r\nGO\r\n";
             sw.WriteLine(createUseDbTxt);
             Console.Write("DDL>");
-            Console.Write("Objects to script - tables = " + c.dbTables.Count.ToString() + " - schemas = " + schemacount.ToString());
+            Console.Write(
+                "Objects to script - tables = "
+                    + c.dbTables.Count.ToString()
+                    + " - schemas = "
+                    + schemacount.ToString()
+            );
 
             getSchemas(sw, false);
 
@@ -2660,7 +3303,13 @@ namespace DWScripter
             Console.WriteLine("done");
         }
 
-        public void compareDDL(PDWscripter cSource, PDWscripter cTarget, string outFile, Boolean SourceFromFile, FilterSettings Filters)
+        public void compareDDL(
+            PDWscripter cSource,
+            PDWscripter cTarget,
+            string outFile,
+            Boolean SourceFromFile,
+            FilterSettings Filters
+        )
         {
             StreamWriter sw = null;
             FileStream fs = null;
@@ -2670,7 +3319,10 @@ namespace DWScripter
                 fs = new FileStream(outFile, FileMode.Create);
                 sw = new StreamWriter(fs);
             }
-            String description = "-- script generated the : " + String.Format("{0:d/M/yyyy HH:mm:ss}", DateTime.Now) + "\r\n";
+            String description =
+                "-- script generated the : "
+                + String.Format("{0:d/M/yyyy HH:mm:ss}", DateTime.Now)
+                + "\r\n";
             sw.WriteLine(description);
 
             Console.Write("CompareDDL>");
@@ -2678,10 +3330,9 @@ namespace DWScripter
             String createUseDbTxt = "USE " + cTarget.sourceDb + "\r\nGO\r\n";
             sw.WriteLine(createUseDbTxt);
 
-            CompareSchemas(sw, cSource, cTarget, SourceFromFile,Filters);
+            CompareSchemas(sw, cSource, cTarget, SourceFromFile, Filters);
 
-            CompareDbTables(sw, cSource, cTarget, SourceFromFile,Filters);
-
+            CompareDbTables(sw, cSource, cTarget, SourceFromFile, Filters);
 
             if (outFile != "")
             {
@@ -2732,7 +3383,13 @@ namespace DWScripter
             Console.WriteLine("done");
         }
 
-        public void CompIterateScriptAllTables(PDWscripter cSource, PDWscripter cTarget, string outFile, Boolean SourceFromFile, FilterSettings Filters)
+        public void CompIterateScriptAllTables(
+            PDWscripter cSource,
+            PDWscripter cTarget,
+            string outFile,
+            Boolean SourceFromFile,
+            FilterSettings Filters
+        )
         {
             string outCompDDLFile = outFile + "_COMP_DDL.dsql";
             string outCompDMLFile = outFile + "_COMP_DML.dsql";
@@ -2756,7 +3413,7 @@ namespace DWScripter
             }
             if ("ALL" == wrkMode || "DML" == wrkMode)
             {
-                cSource.compareDML(cSource, cTarget, outCompDMLFile, SourceFromFile,Filters);
+                cSource.compareDML(cSource, cTarget, outCompDMLFile, SourceFromFile, Filters);
             }
             Console.WriteLine("==== End Comparison ====");
         }
@@ -2796,21 +3453,24 @@ namespace DWScripter
             {
                 JsonSerializer serializer = new JsonSerializer();
                 this.DbObjectDefinitions = new List<KeyValuePair<string, string>>();
-                this.DbObjectDefinitions.AddRange((List<KeyValuePair<String, String>>)serializer.Deserialize(file, typeof(List<KeyValuePair<String, String>>)));
+                this.DbObjectDefinitions.AddRange(
+                    (List<KeyValuePair<String, String>>)
+                        serializer.Deserialize(file, typeof(List<KeyValuePair<String, String>>))
+                );
             }
         }
 
-        public string GenerateTableCreateScript (TableSt tbl)
+        public string GenerateTableCreateScript(TableSt tbl)
         {
-                this.sourceTable = tbl.name;
-                this.destTable = tbl.name;
-                this.distribution_policy = tbl.distribution_policy;
-                this.getSourceColumns(false, true);
-                this.getClusteredIndex(false, true);
-                this.getPartitioning(false, true);
-                this.getNonclusteredIndexes(false, true);
-                this.getStats(false, true);
-                 return this.buildScriptCreateTable();
+            this.sourceTable = tbl.name;
+            this.destTable = tbl.name;
+            this.distribution_policy = tbl.distribution_policy;
+            this.getSourceColumns(false, true);
+            this.getClusteredIndex(false, true);
+            this.getPartitioning(false, true);
+            this.getNonclusteredIndexes(false, true);
+            this.getStats(false, true);
+            return this.buildScriptCreateTable();
         }
     }
 }
